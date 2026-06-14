@@ -123,7 +123,7 @@ export default function FindHelper() {
             <button
               onClick={handleGPS}
               disabled={gpsLoading}
-              className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-blue-400 transition-all disabled:opacity-60"
+              className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:border-blue-400 transition-all disabled:opacity-60"
             >
               {gpsLoading ? (
                 <svg className="animate-spin h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24">
@@ -137,7 +137,7 @@ export default function FindHelper() {
             </button>
             <button
               onClick={() => setShowMap((v) => !v)}
-              className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 hover:border-blue-400 transition-all"
+              className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:border-blue-400 transition-all"
             >
               {showMap ? "🗺️ Hide Map" : "🗺️ Show Map"}
             </button>
