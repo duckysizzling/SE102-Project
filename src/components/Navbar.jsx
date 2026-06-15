@@ -22,7 +22,7 @@ export default function Navbar() {
 
   return (
     <nav className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 sticky top-0 z-50">
-      <div className="max-w-7xl mx-auto px-6 flex items-center justify-between py-3.5">
+      <div className="w-full px-6 flex items-center justify-between py-3.5">
         {/* Logo */}
         <Link to="/" className="text-xl font-extrabold text-blue-600">
           LocalHelp

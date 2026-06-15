@@ -104,7 +104,7 @@ export default function FindHelper() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="w-full mx-auto px-4 py-4">
 
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
@@ -240,7 +240,7 @@ export default function FindHelper() {
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="text-center py-16 text-gray-400"
+                    className="text-center py-12 text-gray-400"
                   >
                     <div className="text-5xl mb-3">🔍</div>
                     <p className="font-semibold text-gray-600 dark:text-gray-300">No helpers found</p>
@@ -382,7 +382,7 @@ export default function FindHelper() {
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: 40 }}
                 transition={{ duration: 0.3 }}
-                className="w-full lg:w-96 flex-shrink-0"
+                className="w-full lg:w-[480px] xl:w-[560px] flex-shrink-0"
               >
                 <div className="sticky top-4 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
                   <div className="bg-white dark:bg-gray-900 px-4 py-3 border-b border-gray-100 dark:border-gray-800">
@@ -396,7 +396,7 @@ export default function FindHelper() {
                   <MapContainer
                     center={mapCenter}
                     zoom={12}
-                    style={{ height: "460px", width: "100%" }}
+                    style={{ height: "600px", width: "100%" }}
                     key={JSON.stringify(mapCenter)}
                   >
                     <TileLayer
