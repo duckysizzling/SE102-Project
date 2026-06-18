@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "./context/ThemeContext.jsx";
 import { AuthProvider } from "./context/AuthContext.jsx";
+import { HelperProvider } from "./context/HelperContext.jsx";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
 import Landing from "./pages/Landing";
@@ -11,6 +12,10 @@ import HelperProfile from "./pages/HelperProfile";
 import PostHelpCard from "./pages/PostHelpCard";
 import WhatsNew from "./pages/WhatsNew";
 import Profile from "./pages/Profile";
+import Settings from "./pages/Settings";
+import About from "./pages/About";
+import NotFound from "./pages/NotFound";
+
 
 function AppLayout({ children }) {
   return (
@@ -26,6 +31,7 @@ export default function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
+        <HelperProvider>
         <BrowserRouter>
           <Routes>
             {/* Landing — no navbar/footer */}
@@ -76,11 +82,30 @@ export default function App() {
                 </AppLayout>
               }
             />
+            <Route
+              path="/settings"
+              element={
+                <AppLayout>
+                  <Settings />
+                </AppLayout>
+             }
+            />
 
-            {/* Fallback */}
-            <Route path="*" element={<Navigate to="/" replace />} />
+            {/* About page — with navbar/footer */}
+            <Route
+              path="/about"
+              element={
+                <AppLayout>
+                  <About />
+                </AppLayout>
+             }
+            />
+
+             {/* 404 fallback — standalone */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
+        </HelperProvider>
       </AuthProvider>
     </ThemeProvider>
   );

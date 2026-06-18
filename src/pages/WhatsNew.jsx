@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { mockPosts, POST_CATEGORIES, TRENDING_TAGS } from "../data/mockData";
+import { mockPosts, POST_CATEGORIES, TRENDING_TAGS } from "../data/MockData";
 
 export default function WhatsNew() {
   const [posts, setPosts] = useState(

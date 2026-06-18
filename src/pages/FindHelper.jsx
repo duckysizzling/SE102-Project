@@ -4,7 +4,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { MapContainer, TileLayer, Marker, Popup, Circle } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { mockHelpers, CATEGORIES, getTier } from "../data/mockData";
+import { CATEGORIES, getTier } from "../data/MockData";
+import { useHelpers } from "../context/HelperContext.jsx";
 
 // Fix Leaflet default icon
 delete L.Icon.Default.prototype._getIconUrl;
@@ -44,6 +45,7 @@ function getDistance(lat1, lng1, lat2, lng2) {
 export default function FindHelper() {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
+  const { helpers } = useHelpers();
   const [category, setCategory] = useState("All");
   const [sort, setSort] = useState("rating");
   const [availableOnly, setAvailableOnly] = useState(false);
@@ -74,8 +76,8 @@ export default function FindHelper() {
   };
 
   // Filter + sort
-  const filtered = mockHelpers
-    .filter((h) => {
+  const filtered = helpers
+   .filter((h) => {
       const matchQ =
         h.name.toLowerCase().includes(q.toLowerCase()) ||
         h.category.toLowerCase().includes(q.toLowerCase()) ||

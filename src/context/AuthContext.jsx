@@ -1,5 +1,5 @@
 import { createContext, useContext, useState } from "react";
-import { mockUser } from "../data/mockData";
+import { mockUser } from "../data/MockData";
 
 const AuthContext = createContext();
 

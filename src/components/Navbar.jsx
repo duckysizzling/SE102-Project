@@ -33,6 +33,7 @@ export default function Navbar() {
           {navLink("/find", "Find")}
           {navLink("/whatsnew", "What's New")}
           {navLink("/post", "Post a Service")}
+          {navLink("/about", "About")}
 
           {user ? (
             <>
