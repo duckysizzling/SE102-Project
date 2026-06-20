@@ -20,8 +20,25 @@ export function HelperProvider({ children }) {
     return helperWithId;
   };
 
+  const updateHelper = (id, updates) => {
+  const updated = helpers.map((h) =>
+    String(h.id) === String(id) ? { ...h, ...updates } : h
+  );
+  setHelpers(updated);
+  localStorage.setItem("localhelp_helpers", JSON.stringify(updated));
+};
+
+const deleteHelper = (id) => {
+  const updated = helpers.filter((h) => String(h.id) !== String(id));
+  setHelpers(updated);
+  localStorage.setItem("localhelp_helpers", JSON.stringify(updated));
+};
+const getUserHelperCards = (userName) => {
+  return helpers.filter((h) => h.name === userName);
+};
+
   return (
-    <HelperContext.Provider value={{ helpers, addHelper }}>
+    <HelperContext.Provider value={{ helpers, addHelper, updateHelper, deleteHelper, getUserHelperCards }}>
       {children}
     </HelperContext.Provider>
   );

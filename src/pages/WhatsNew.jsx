@@ -1,58 +1,40 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { mockPosts, POST_CATEGORIES, TRENDING_TAGS } from "../data/MockData";
+import { POST_CATEGORIES, TRENDING_TAGS } from "../data/MockData";
+import { usePosts } from "../context/PostsContext.jsx";
+import PostComposer from "../components/PostComposer.jsx";
 
 export default function WhatsNew() {
-  const [posts, setPosts] = useState(
-    mockPosts.map((p) => ({ ...p, liked: false, showComments: false, newComment: "" }))
-  );
+  const { posts, toggleLike, addComment } = usePosts();
   const [category, setCategory] = useState("All");
   const [activeTag, setActiveTag] = useState(null);
+  const [openComments, setOpenComments] = useState({});
+  const [commentDrafts, setCommentDrafts] = useState({});
+  const [lightboxImage, setLightboxImage] = useState(null);
 
   const filtered = posts.filter((p) => {
     const matchCat = category === "All" || p.category === category;
-    const matchTag = !activeTag || p.tags.includes(activeTag);
+    const matchTag = !activeTag || (p.tags || []).includes(activeTag);
     return matchCat && matchTag;
   });
 
-  const handleLike = (id) => {
-    setPosts((prev) =>
-      prev.map((p) =>
-        p.id === id
-          ? { ...p, liked: !p.liked, likes: p.liked ? p.likes - 1 : p.likes + 1 }
-          : p
-      )
-    );
+  const handleLike = (id, currentlyLiked) => {
+    toggleLike(id, currentlyLiked);
   };
 
   const handleToggleComments = (id) => {
-    setPosts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, showComments: !p.showComments } : p))
-    );
+    setOpenComments((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
   const handleCommentChange = (id, val) => {
-    setPosts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, newComment: val } : p))
-    );
+    setCommentDrafts((prev) => ({ ...prev, [id]: val }));
   };
 
   const handleAddComment = (id) => {
-    setPosts((prev) =>
-      prev.map((p) => {
-        if (p.id === id && p.newComment.trim()) {
-          return {
-            ...p,
-            comments: [
-              ...p.comments,
-              { user: "You", text: p.newComment.trim(), date: new Date().toISOString().split("T")[0] },
-            ],
-            newComment: "",
-          };
-        }
-        return p;
-      })
-    );
+    const text = commentDrafts[id]?.trim();
+    if (!text) return;
+    addComment(id, text);
+    setCommentDrafts((prev) => ({ ...prev, [id]: "" }));
   };
 
   const CATEGORY_COLORS = {
@@ -61,11 +43,23 @@ export default function WhatsNew() {
     Sale: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
   };
 
+  // Local "liked" tracking — separate from stored data since likes are simulated per-session
+  const [likedIds, setLikedIds] = useState(new Set());
+  const isLiked = (id) => likedIds.has(id);
+  const handleLikeClick = (id) => {
+    const currentlyLiked = isLiked(id);
+    setLikedIds((prev) => {
+      const next = new Set(prev);
+      currentlyLiked ? next.delete(id) : next.add(id);
+      return next;
+    });
+    handleLike(id, currentlyLiked);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <div className="max-w-6xl mx-auto px-4 py-8">
 
-        {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">
             What's New
@@ -77,10 +71,10 @@ export default function WhatsNew() {
 
         <div className="flex flex-col lg:flex-row gap-6">
 
-          {/* LEFT: Feed */}
           <div className="flex-1 min-w-0">
 
-            {/* Category filter */}
+            <PostComposer />
+
             <div className="flex gap-2 mb-5 flex-wrap">
               {POST_CATEGORIES.map((cat) => (
                 <button
@@ -97,7 +91,6 @@ export default function WhatsNew() {
               ))}
             </div>
 
-            {/* Active tag indicator */}
             {activeTag && (
               <div className="flex items-center gap-2 mb-4">
                 <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -115,7 +108,6 @@ export default function WhatsNew() {
               </div>
             )}
 
-            {/* Posts */}
             <div className="space-y-4">
               <AnimatePresence>
                 {filtered.length === 0 ? (
@@ -144,7 +136,6 @@ export default function WhatsNew() {
                       transition={{ delay: i * 0.05 }}
                       className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 shadow-sm"
                     >
-                      {/* Post header */}
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
                           <img
@@ -166,39 +157,57 @@ export default function WhatsNew() {
                         </span>
                       </div>
 
-                      {/* Post content */}
                       <p className="mt-3 text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
                         {post.content}
                       </p>
 
-                      {/* Tags */}
-                      <div className="flex gap-1.5 mt-3 flex-wrap">
-                        {post.tags.map((tag) => (
-                          <button
-                            key={tag}
-                            onClick={() => { setActiveTag(tag); setCategory("All"); }}
-                            className="text-xs text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-colors"
-                          >
-                            {tag}
-                          </button>
-                        ))}
-                      </div>
+                      {/* Image gallery */}
+                      {post.images && post.images.length > 0 && (
+                        <div className={`grid gap-1.5 mt-3 rounded-xl overflow-hidden ${
+                          post.images.length === 1 ? "grid-cols-1" :
+                          post.images.length === 2 ? "grid-cols-2" :
+                          "grid-cols-3"
+                        }`}>
+                          {post.images.slice(0, 6).map((img, idx) => (
+                            <button
+                              key={idx}
+                              onClick={() => setLightboxImage(img)}
+                              className={`relative ${post.images.length === 1 ? "aspect-video" : "aspect-square"} overflow-hidden`}
+                            >
+                              <img
+                                src={img}
+                                alt={`Post image ${idx + 1}`}
+                                className="w-full h-full object-cover hover:opacity-90 transition-opacity"
+                              />
+                            </button>
+                          ))}
+                        </div>
+                      )}
 
-                      {/* Actions */}
+                      {post.tags && post.tags.length > 0 && (
+                        <div className="flex gap-1.5 mt-3 flex-wrap">
+                          {post.tags.map((tag) => (
+                            <button
+                              key={tag}
+                              onClick={() => { setActiveTag(tag); setCategory("All"); }}
+                              className="text-xs text-blue-500 hover:text-blue-700 dark:hover:text-blue-300 hover:underline transition-colors"
+                            >
+                              {tag}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
                       <div className="flex items-center gap-4 mt-4 pt-3 border-t border-gray-100 dark:border-gray-800">
-                        {/* Like */}
                         <button
-                          onClick={() => handleLike(post.id)}
+                          onClick={() => handleLikeClick(post.id)}
                           className={`flex items-center gap-1.5 text-sm font-medium transition-all active:scale-95 ${
-                            post.liked
-                              ? "text-red-500"
-                              : "text-gray-400 hover:text-red-400"
+                            isLiked(post.id) ? "text-red-500" : "text-gray-400 hover:text-red-400"
                           }`}
                         >
-                          {post.liked ? "❤️" : "🤍"} {post.likes}
+                          {isLiked(post.id) ? "❤️" : "🤍"} {post.likes}
                         </button>
 
-                        {/* Comment toggle */}
                         <button
                           onClick={() => handleToggleComments(post.id)}
                           className="flex items-center gap-1.5 text-sm font-medium text-gray-400 hover:text-blue-500 transition-colors"
@@ -213,16 +222,14 @@ export default function WhatsNew() {
                         )}
                       </div>
 
-                      {/* Comments section */}
                       <AnimatePresence>
-                        {post.showComments && (
+                        {openComments[post.id] && (
                           <motion.div
                             initial={{ opacity: 0, height: 0 }}
                             animate={{ opacity: 1, height: "auto" }}
                             exit={{ opacity: 0, height: 0 }}
                             className="mt-3 overflow-hidden"
                           >
-                            {/* Existing comments */}
                             {post.comments.length > 0 && (
                               <div className="space-y-2 mb-3">
                                 {post.comments.map((c, idx) => (
@@ -247,11 +254,10 @@ export default function WhatsNew() {
                               </p>
                             )}
 
-                            {/* Add comment */}
                             <div className="flex gap-2">
                               <input
                                 type="text"
-                                value={post.newComment}
+                                value={commentDrafts[post.id] || ""}
                                 onChange={(e) => handleCommentChange(post.id, e.target.value)}
                                 onKeyDown={(e) => e.key === "Enter" && handleAddComment(post.id)}
                                 placeholder="Write a comment..."
@@ -259,7 +265,7 @@ export default function WhatsNew() {
                               />
                               <button
                                 onClick={() => handleAddComment(post.id)}
-                                disabled={!post.newComment.trim()}
+                                disabled={!commentDrafts[post.id]?.trim()}
                                 className="text-xs font-semibold bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 text-white px-3 py-2 rounded-xl transition-all active:scale-95"
                               >
                                 Post
@@ -275,11 +281,9 @@ export default function WhatsNew() {
             </div>
           </div>
 
-          {/* RIGHT: Sidebar */}
           <div className="w-full lg:w-64 flex-shrink-0">
             <div className="sticky top-4 space-y-4">
 
-              {/* Trending tags */}
               <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 shadow-sm">
                 <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">
                   🔥 Trending Tags
@@ -301,17 +305,16 @@ export default function WhatsNew() {
                 </div>
               </div>
 
-              {/* Community stats */}
               <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 shadow-sm">
                 <h3 className="text-sm font-bold text-gray-900 dark:text-white mb-3">
                   📊 Community
                 </h3>
                 <div className="space-y-2">
                   {[
-                    { label: "Total Posts", value: mockPosts.length },
-                    { label: "Questions", value: mockPosts.filter(p => p.category === "Question").length },
-                    { label: "Announcements", value: mockPosts.filter(p => p.category === "Announcement").length },
-                    { label: "For Sale", value: mockPosts.filter(p => p.category === "Sale").length },
+                    { label: "Total Posts", value: posts.length },
+                    { label: "Questions", value: posts.filter(p => p.category === "Question").length },
+                    { label: "Announcements", value: posts.filter(p => p.category === "Announcement").length },
+                    { label: "For Sale", value: posts.filter(p => p.category === "Sale").length },
                   ].map((stat) => (
                     <div key={stat.label} className="flex items-center justify-between">
                       <span className="text-xs text-gray-500 dark:text-gray-400">{stat.label}</span>
@@ -326,6 +329,25 @@ export default function WhatsNew() {
 
         </div>
       </div>
+
+      {/* Image lightbox */}
+      <AnimatePresence>
+        {lightboxImage && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setLightboxImage(null)}
+            className="fixed inset-0 bg-black/90 flex items-center justify-center p-4 z-50 cursor-zoom-out"
+          >
+            <img
+              src={lightboxImage}
+              alt="Full size"
+              className="max-w-full max-h-full object-contain rounded-lg"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

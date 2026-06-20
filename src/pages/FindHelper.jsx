@@ -1,19 +1,84 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { MapContainer, TileLayer, Marker, Popup, Circle } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { CATEGORIES, getTier } from "../data/MockData";
 import { useHelpers } from "../context/HelperContext.jsx";
+import MarkerClusterGroup from "react-leaflet-cluster";
 
-// Fix Leaflet default icon
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
   iconUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
   shadowUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png",
 });
+
+const CATEGORY_PIN_COLORS = {
+  Plumber: "#3b82f6",
+  Tutor: "#8b5cf6",
+  Driver: "#f59e0b",
+  Electrician: "#eab308",
+  Carpenter: "#92400e",
+  Cleaner: "#10b981",
+  Gardener: "#22c55e",
+  Mechanic: "#64748b",
+  Designer: "#ec4899",
+  Coder: "#06b6d4",
+};
+
+const CATEGORY_ICONS = {
+  Plumber: "🔧",
+  Tutor: "📚",
+  Driver: "🚗",
+  Electrician: "⚡",
+  Carpenter: "🪚",
+  Cleaner: "🧹",
+  Gardener: "🌿",
+  Mechanic: "🔩",
+  Designer: "🎨",
+  Coder: "💻",
+};
+
+const CATEGORY_DOT_COLORS = CATEGORY_PIN_COLORS;
+
+function createHelperIcon(helper, isSelected) {
+  const color = CATEGORY_PIN_COLORS[helper.category] || "#3b82f6";
+  const icon = CATEGORY_ICONS[helper.category] || "📍";
+  const pinSize = isSelected ? 42 : 34;
+
+  return L.divIcon({
+    className: "custom-helper-pin",
+    html: `
+      <div style="
+        display:flex; flex-direction:column; align-items:center;
+        transform: scale(${isSelected ? 1.1 : 1});
+        transform-origin: bottom center;
+        transition: transform 0.2s ease;
+      ">
+        <div style="
+          width:${pinSize}px; height:${pinSize}px;
+          background:${color};
+          border-radius: 50%;
+          border: 3px solid white;
+          box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+          display:flex; align-items:center; justify-content:center;
+          font-size:${pinSize * 0.5}px;
+          margin-bottom: 4px;
+        ">${icon}</div>
+        <div style="
+          background:white; padding:3px 9px; border-radius:8px;
+          font-size:11px; font-weight:600; color:#1f2937;
+          box-shadow: 0 2px 5px rgba(0,0,0,0.18);
+          white-space:nowrap; max-width:130px; overflow:hidden; text-overflow:ellipsis;
+        ">${helper.name}</div>
+      </div>
+    `,
+    iconSize: [pinSize + 20, pinSize + 30],
+    iconAnchor: [(pinSize + 20) / 2, pinSize + 26],
+  });
+}
 
 const SORT_OPTIONS = [
   { value: "rating", label: "Highest Rated" },
@@ -22,12 +87,18 @@ const SORT_OPTIONS = [
   { value: "jobs", label: "Most Jobs Done" },
 ];
 
-const TIER_COLORS = {
+const TIER_BADGE_STYLE = {
   Bronze: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
   Silver: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
   Gold: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
-  Platinum: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
-  Diamond: "bg-cyan-100 text-cyan-700 dark:bg-cyan-900/40 dark:text-cyan-300",
+};
+
+const TIER_ACCENT = {
+  Bronze: "border-l-amber-400",
+  Silver: "border-l-gray-400",
+  Gold: "border-l-yellow-400",
+  Platinum: "border-l-indigo-400",
+  Diamond: "border-l-cyan-400",
 };
 
 function getDistance(lat1, lng1, lat2, lng2) {
@@ -37,9 +108,153 @@ function getDistance(lat1, lng1, lat2, lng2) {
   const a =
     Math.sin(dLat / 2) ** 2 +
     Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLng / 2) ** 2;
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLng / 2) ** 2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function MapFlyController({ selectedHelper, userPos }) {
+  const map = useMap();
+
+  useEffect(() => {
+    if (selectedHelper) {
+      map.flyTo([selectedHelper.lat, selectedHelper.lng], 17, { duration: 1.1 });
+    } else if (userPos) {
+      map.flyTo([userPos.lat, userPos.lng], 12, { duration: 1.1 });
+    }
+  }, [selectedHelper, userPos, map]);
+
+  return null;
+}
+
+function TierBadgeOrFrame({ tier }) {
+  if (tier.label === "Platinum") {
+    return (
+      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
+        ✦ Platinum
+      </span>
+    );
+  }
+  if (tier.label === "Diamond") {
+    return (
+      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300">
+        ◆ Diamond
+      </span>
+    );
+  }
+  return (
+    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${TIER_BADGE_STYLE[tier.label]}`}>
+      {tier.label}
+    </span>
+  );
+}
+
+function HelperCard({ helper, isSelected, onSelect, onView, userPos }) {
+  const tier = getTier(helper.jobsDone);
+  const dist = userPos
+    ? getDistance(userPos.lat, userPos.lng, helper.lat, helper.lng).toFixed(1)
+    : null;
+  const dotColor = CATEGORY_DOT_COLORS[helper.category] || "#3b82f6";
+
+  return (
+    <motion.div
+      whileHover={{ y: -2 }}
+      onClick={onSelect}
+      className={`bg-white dark:bg-gray-900 border-l-4 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 cursor-pointer transition-all hover:shadow-md ${TIER_ACCENT[tier.label]
+        } ${isSelected ? "ring-1 ring-blue-300 dark:ring-blue-700 shadow-md" : ""
+        }`}
+    >
+      <div className="flex items-center gap-4">
+        <div className="relative flex-shrink-0">
+          <img
+            src={helper.avatar}
+            alt={helper.name}
+            className="w-14 h-14 rounded-full object-cover"
+          />
+          <span
+            className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-gray-900 ${helper.available ? "bg-green-400" : "bg-gray-300"
+              }`}
+          />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-bold text-gray-900 dark:text-white">
+              {helper.name}
+            </span>
+            {helper.verified && (
+              <span className="text-blue-500 text-xs font-medium flex items-center gap-0.5">
+                ✓ Verified
+              </span>
+            )}
+            <TierBadgeOrFrame tier={tier} />
+          </div>
+
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5 flex items-center gap-1.5">
+            <span
+              className="inline-block w-2 h-2 rounded-full flex-shrink-0"
+              style={{ backgroundColor: dotColor }}
+            />
+            {helper.category} · {helper.location}
+          </p>
+
+          <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+            <span className="flex items-center gap-1 text-sm text-yellow-500 font-semibold">
+              ★ {helper.rating}
+              <span className="text-gray-400 font-normal text-xs">
+                ({helper.reviews})
+              </span>
+            </span>
+            <span className="text-xs text-gray-400">
+              {helper.jobsDone} jobs done
+            </span>
+            {dist && (
+              <span className="text-xs text-blue-500 font-medium">
+                📍 {dist} km away
+              </span>
+            )}
+            <span
+              className={`text-xs font-medium ${helper.available ? "text-green-500" : "text-gray-400"
+                }`}
+            >
+              {helper.available ? "● Available" : "○ Unavailable"}
+            </span>
+          </div>
+
+          <div className="flex gap-1.5 mt-2 flex-wrap">
+            {helper.tags.slice(0, 3).map((tag) => (
+              <span
+                key={tag}
+                className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full"
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+          <div className="text-right">
+            <span className="font-bold text-gray-900 dark:text-white">
+              ₱{helper.rate.toLocaleString()}
+            </span>
+            <span className="text-xs text-gray-400 block">
+              {helper.rateUnit}
+            </span>
+          </div>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onView();
+            }}
+            className="text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-xl transition-all active:scale-95"
+          >
+            View
+          </button>
+        </div>
+      </div>
+    </motion.div>
+  );
 }
 
 export default function FindHelper() {
@@ -54,8 +269,8 @@ export default function FindHelper() {
   const [userPos, setUserPos] = useState(null);
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsError, setGpsError] = useState("");
+  const [radius, setRadius] = useState(15);
 
-  // GPS support
   const handleGPS = () => {
     if (!navigator.geolocation) {
       setGpsError("GPS not supported on this device.");
@@ -75,17 +290,19 @@ export default function FindHelper() {
     );
   };
 
-  // Filter + sort
   const filtered = helpers
-   .filter((h) => {
+    .filter((h) => {
+      const query = q.toLowerCase().trim();
       const matchQ =
-        h.name.toLowerCase().includes(q.toLowerCase()) ||
-        h.category.toLowerCase().includes(q.toLowerCase()) ||
-        h.tags.some((t) => t.toLowerCase().includes(q.toLowerCase()));
+        !query ||
+        h.name.toLowerCase().includes(query) ||
+        h.category.toLowerCase().includes(query) ||
+        h.bio.toLowerCase().includes(query) ||
+        h.tags.some((t) => t.toLowerCase().includes(query));
       const matchCat = category === "All" || h.category === category;
       const matchAvail = !availableOnly || h.available;
       const matchDist = userPos
-        ? getDistance(userPos.lat, userPos.lng, h.lat, h.lng) <= 50
+        ? getDistance(userPos.lat, userPos.lng, h.lat, h.lng) <= radius
         : true;
       return matchQ && matchCat && matchAvail && matchDist;
     })
@@ -97,18 +314,37 @@ export default function FindHelper() {
       return 0;
     });
 
-  const mapCenter =
-    selectedHelper
-      ? [selectedHelper.lat, selectedHelper.lng]
-      : userPos
-      ? [userPos.lat, userPos.lng]
-      : [14.4298, 120.9631];
+  const relatedSuggestions = (() => {
+    const query = q.toLowerCase().trim();
+    if (!query || filtered.length > 2) return [];
+
+    const queryWords = query.split(/\s+/).filter((w) => w.length > 2);
+    const matches = new Set();
+
+    helpers.forEach((h) => {
+      const searchableTerms = [h.category, ...h.tags];
+      searchableTerms.forEach((term) => {
+        const termLower = term.toLowerCase();
+        const isRelated = queryWords.some(
+          (qw) => termLower.includes(qw) || qw.includes(termLower)
+        );
+        if (isRelated && !termLower.includes(query)) {
+          matches.add(term);
+        }
+      });
+    });
+
+    return Array.from(matches).slice(0, 4);
+  })();
+
+  const initialCenter = userPos
+    ? [userPos.lat, userPos.lng]
+    : [14.4298, 120.9631];
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
       <div className="w-full mx-auto px-4 py-4">
 
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
             <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">
@@ -120,7 +356,6 @@ export default function FindHelper() {
             </p>
           </div>
 
-          {/* GPS + Map toggle */}
           <div className="flex items-center gap-2 flex-wrap">
             <button
               onClick={handleGPS}
@@ -151,18 +386,37 @@ export default function FindHelper() {
             <span>⚠️</span> {gpsError}
           </p>
         )}
+
         {userPos && (
-          <p className="text-xs text-green-600 dark:text-green-400 mb-3 flex items-center gap-1">
-            <span>✓</span> Showing helpers within 50km of your location
-          </p>
+          <div className="mb-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl px-4 py-3">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-gray-600 dark:text-gray-300 flex items-center gap-1">
+                <span className="text-green-500">✓</span> Search radius
+              </span>
+              <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+                {radius} km
+              </span>
+            </div>
+            <input
+              type="range"
+              min="1"
+              max="50"
+              step="1"
+              value={radius}
+              onChange={(e) => setRadius(Number(e.target.value))}
+              className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-gray-200 dark:bg-gray-700 accent-blue-600"
+            />
+            <div className="flex justify-between text-[10px] text-gray-400 mt-1">
+              <span>1 km</span>
+              <span>50 km</span>
+            </div>
+          </div>
         )}
 
         <div className="flex flex-col lg:flex-row gap-6">
 
-          {/* LEFT: Filters + Results */}
           <div className="flex-1 min-w-0">
 
-            {/* Search */}
             <div className="relative mb-4">
               <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
               <input
@@ -182,19 +436,16 @@ export default function FindHelper() {
               )}
             </div>
 
-            {/* Filters row */}
             <div className="flex flex-wrap items-center gap-2 mb-4">
-              {/* Category pills */}
               <div className="flex gap-1.5 flex-wrap">
                 {CATEGORIES.map((cat) => (
                   <button
                     key={cat}
                     onClick={() => setCategory(cat)}
-                    className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
-                      category === cat
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${category === cat
                         ? "bg-blue-600 text-white border-blue-600"
                         : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-blue-400"
-                    }`}
+                      }`}
                   >
                     {cat}
                   </button>
@@ -202,19 +453,16 @@ export default function FindHelper() {
               </div>
             </div>
 
-            {/* Sort + Available toggle */}
             <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
               <label className="flex items-center gap-2 cursor-pointer">
                 <div
                   onClick={() => setAvailableOnly((v) => !v)}
-                  className={`w-10 h-5 rounded-full transition-all relative ${
-                    availableOnly ? "bg-blue-600" : "bg-gray-200 dark:bg-gray-700"
-                  }`}
+                  className={`w-10 h-5 rounded-full transition-all relative ${availableOnly ? "bg-blue-600" : "bg-gray-200 dark:bg-gray-700"
+                    }`}
                 >
                   <div
-                    className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${
-                      availableOnly ? "left-5" : "left-0.5"
-                    }`}
+                    className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${availableOnly ? "left-5" : "left-0.5"
+                      }`}
                   />
                 </div>
                 <span className="text-sm text-gray-600 dark:text-gray-300">
@@ -235,7 +483,6 @@ export default function FindHelper() {
               </select>
             </div>
 
-            {/* Results */}
             <div className="space-y-3">
               <AnimatePresence>
                 {filtered.length === 0 ? (
@@ -247,6 +494,24 @@ export default function FindHelper() {
                     <div className="text-5xl mb-3">🔍</div>
                     <p className="font-semibold text-gray-600 dark:text-gray-300">No helpers found</p>
                     <p className="text-sm mt-1">Try a different search or category.</p>
+
+                    {relatedSuggestions.length > 0 && (
+                      <div className="mt-4">
+                        <p className="text-xs text-gray-400 mb-2">You might be looking for:</p>
+                        <div className="flex flex-wrap justify-center gap-2">
+                          {relatedSuggestions.map((term) => (
+                            <button
+                              key={term}
+                              onClick={() => setQ(term)}
+                              className="text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 px-3 py-1.5 rounded-full hover:bg-blue-100 dark:hover:bg-blue-900/50 transition-all"
+                            >
+                              {term}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <button
                       onClick={() => { setQ(""); setCategory("All"); setAvailableOnly(false); }}
                       className="mt-4 text-sm text-blue-600 hover:underline"
@@ -256,12 +521,7 @@ export default function FindHelper() {
                   </motion.div>
                 ) : (
                   filtered.map((helper, i) => {
-                    const tier = getTier(helper.jobsDone);
-                    const dist = userPos
-                      ? getDistance(userPos.lat, userPos.lng, helper.lat, helper.lng).toFixed(1)
-                      : null;
                     const isSelected = selectedHelper?.id === helper.id;
-
                     return (
                       <motion.div
                         key={helper.id}
@@ -269,105 +529,17 @@ export default function FindHelper() {
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -8 }}
                         transition={{ delay: i * 0.05 }}
-                        onClick={() => setSelectedHelper(isSelected ? null : helper)}
-                        className={`bg-white dark:bg-gray-900 border rounded-2xl p-4 cursor-pointer transition-all hover:shadow-md ${
-                          isSelected
-                            ? "border-blue-400 shadow-md shadow-blue-100 dark:shadow-none"
-                            : "border-gray-100 dark:border-gray-800"
-                        }`}
                       >
-                        <div className="flex items-center gap-4">
-                          {/* Avatar */}
-                          <div className="relative flex-shrink-0">
-                            <img
-                              src={helper.avatar}
-                              alt={helper.name}
-                              className="w-14 h-14 rounded-full object-cover"
-                            />
-                            <span
-                              className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-gray-900 ${
-                                helper.available ? "bg-green-400" : "bg-gray-300"
-                              }`}
-                            />
-                          </div>
-
-                          {/* Info */}
-                          <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2 flex-wrap">
-                              <span className="font-bold text-gray-900 dark:text-white">
-                                {helper.name}
-                              </span>
-                              {helper.verified && (
-                                <span className="text-blue-500 text-xs font-medium flex items-center gap-0.5">
-                                  ✓ Verified
-                                </span>
-                              )}
-                              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${TIER_COLORS[tier.label]}`}>
-                                {tier.label}
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                              {helper.category} · {helper.location}
-                            </p>
-                            <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-                              <span className="flex items-center gap-1 text-sm text-yellow-500 font-semibold">
-                                ★ {helper.rating}
-                                <span className="text-gray-400 font-normal text-xs">
-                                  ({helper.reviews})
-                                </span>
-                              </span>
-                              <span className="text-xs text-gray-400">
-                                {helper.jobsDone} jobs done
-                              </span>
-                              {dist && (
-                                <span className="text-xs text-blue-500 font-medium">
-                                  📍 {dist} km away
-                                </span>
-                              )}
-                              <span
-                                className={`text-xs font-medium ${
-                                  helper.available
-                                    ? "text-green-500"
-                                    : "text-gray-400"
-                                }`}
-                              >
-                                {helper.available ? "● Available" : "○ Unavailable"}
-                              </span>
-                            </div>
-                            {/* Tags */}
-                            <div className="flex gap-1.5 mt-2 flex-wrap">
-                              {helper.tags.slice(0, 3).map((tag) => (
-                                <span
-                                  key={tag}
-                                  className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-2 py-0.5 rounded-full"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                          </div>
-
-                          {/* Rate + Button */}
-                          <div className="flex flex-col items-end gap-2 flex-shrink-0">
-                            <div className="text-right">
-                              <span className="font-bold text-gray-900 dark:text-white">
-                                ₱{helper.rate.toLocaleString()}
-                              </span>
-                              <span className="text-xs text-gray-400 block">
-                                {helper.rateUnit}
-                              </span>
-                            </div>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                navigate(`/helper/${helper.id}`);
-                              }}
-                              className="text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-xl transition-all active:scale-95"
-                            >
-                              View
-                            </button>
-                          </div>
-                        </div>
+                        <HelperCard
+                          helper={helper}
+                          isSelected={isSelected}
+                          userPos={userPos}
+                          onSelect={() => {
+                            setSelectedHelper(isSelected ? null : helper);
+                            if (!showMap) setShowMap(true);
+                          }}
+                          onView={() => navigate(`/helper/${helper.id}`)}
+                        />
                       </motion.div>
                     );
                   })
@@ -376,7 +548,6 @@ export default function FindHelper() {
             </div>
           </div>
 
-          {/* RIGHT: Map */}
           <AnimatePresence>
             {showMap && (
               <motion.div
@@ -387,25 +558,29 @@ export default function FindHelper() {
                 className="w-full lg:w-[480px] xl:w-[560px] flex-shrink-0"
               >
                 <div className="sticky top-4 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
-                  <div className="bg-white dark:bg-gray-900 px-4 py-3 border-b border-gray-100 dark:border-gray-800">
-                    <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                      🗺️ Helper Map
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      Click a card to highlight on map
-                    </p>
+                  <div className="bg-white dark:bg-gray-900 px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
+                        🗺️ Helper Map
+                      </p>
+                      <p className="text-xs text-gray-400">
+                        {selectedHelper ? `Focused on ${selectedHelper.name}` : "Click a card to zoom in"}
+                      </p>
+                    </div>
+                    <span className="text-xs font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 px-2.5 py-1 rounded-full">
+                      {filtered.length} pin{filtered.length !== 1 ? "s" : ""}
+                    </span>
                   </div>
                   <MapContainer
-                    center={mapCenter}
+                    center={initialCenter}
                     zoom={12}
                     style={{ height: "600px", width: "100%" }}
-                    key={JSON.stringify(mapCenter)}
                   >
+                    <MapFlyController selectedHelper={selectedHelper} userPos={userPos} />
                     <TileLayer
                       attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                       url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                     />
-                    {/* User location */}
                     {userPos && (
                       <>
                         <Marker position={[userPos.lat, userPos.lng]}>
@@ -413,26 +588,58 @@ export default function FindHelper() {
                         </Marker>
                         <Circle
                           center={[userPos.lat, userPos.lng]}
-                          radius={50000}
+                          radius={radius * 1000}
                           pathOptions={{ color: "#3b82f6", fillOpacity: 0.05 }}
                         />
                       </>
                     )}
-                    {/* Helper markers */}
-                    {filtered.map((helper) => (
-                      <Marker key={helper.id} position={[helper.lat, helper.lng]}>
-                        <Popup>
-                          <div className="text-sm">
-                            <p className="font-bold">{helper.name}</p>
-                            <p className="text-gray-500">{helper.category}</p>
-                            <p className="text-yellow-500">★ {helper.rating}</p>
-                            <p className="text-green-600">
-                              {helper.available ? "Available" : "Unavailable"}
-                            </p>
-                          </div>
-                        </Popup>
-                      </Marker>
-                    ))}
+                    <MarkerClusterGroup
+                      chunkedLoading
+                      maxClusterRadius={50}
+                      spiderfyOnMaxZoom={true}
+                      showCoverageOnHover={false}
+                      disableClusteringAtZoom={17}
+                      iconCreateFunction={(cluster) => {
+                        const count = cluster.getChildCount();
+                        return L.divIcon({
+                          html: `
+        <div style="
+          background: #2563eb;
+          width: 40px; height: 40px;
+          border-radius: 50%;
+          border: 3px solid white;
+          box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+          display:flex; align-items:center; justify-content:center;
+          color: white; font-weight: 700; font-size: 14px;
+        ">${count}</div>
+      `,
+                          className: "custom-cluster-icon",
+                          iconSize: [40, 40],
+                        });
+                      }}
+                    >
+                      {filtered.map((helper) => (
+                        <Marker
+                          key={helper.id}
+                          position={[helper.lat, helper.lng]}
+                          icon={createHelperIcon(helper, selectedHelper?.id === helper.id)}
+                          eventHandlers={{
+                            click: () => setSelectedHelper(helper),
+                          }}
+                        >
+                          <Popup>
+                            <div className="text-sm">
+                              <p className="font-bold">{helper.name}</p>
+                              <p className="text-gray-500">{helper.category}</p>
+                              <p className="text-yellow-500">★ {helper.rating}</p>
+                              <p className="text-green-600">
+                                {helper.available ? "Available" : "Unavailable"}
+                              </p>
+                            </div>
+                          </Popup>
+                        </Marker>
+                      ))}
+                    </MarkerClusterGroup>
                   </MapContainer>
                 </div>
               </motion.div>
