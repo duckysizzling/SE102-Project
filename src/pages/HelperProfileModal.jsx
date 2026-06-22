@@ -80,6 +80,7 @@ export default function HelperProfileModal() {
     <AnimatePresence>
       {/* Backdrop — clicking it closes the modal (not the chat drawer) */}
       <motion.div
+        key="backdrop"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
@@ -159,8 +160,8 @@ export default function HelperProfileModal() {
 
             {/* Tags */}
             <div className="flex gap-1.5 mt-3 flex-wrap">
-              {baseHelper.tags.slice(0, 4).map((tag) => (
-                <span key={tag} className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-2.5 py-1 rounded-full">
+              {baseHelper.tags.filter(Boolean).slice(0, 4).map((tag, index) => (
+                <span key={`${tag}-${index}`} className="text-xs bg-gray-100 dark:bg-gray-800 text-gray-500 dark:text-gray-400 px-2.5 py-1 rounded-full">
                   {tag}
                 </span>
               ))}
@@ -193,6 +194,7 @@ export default function HelperProfileModal() {
 
       {/* Chat Drawer — z-[60] so it sits above the modal backdrop (z-50) */}
       <ChatDrawer
+        key="chat-drawer"
         open={chatOpen}
         onClose={() => setChatOpen(false)}
         helper={baseHelper}
