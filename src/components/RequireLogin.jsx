@@ -16,7 +16,7 @@ export default function RequireLogin({
         transition={{ duration: 0.35 }}
         className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-8 max-w-sm shadow-sm"
       >
-        <div className="w-16 h-16 mx-auto rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-3xl mb-4">
+        <div className="w-16 h-16 mx-auto rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-3xl text-blue-500 mb-4">
           {icon}
         </div>
         <h2 className="text-lg font-bold text-gray-900 dark:text-white">

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
+import LocalHelpLogo from "../components/LocalHelpLogo";
 
 export default function SignUp() {
   const navigate = useNavigate();
@@ -13,11 +14,13 @@ export default function SignUp() {
     password: "",
     confirmPassword: "",
     location: "",
-    role: "seeker", // seeker | helper
+    role: "seeker",
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [agreed, setAgreed] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
 
   const validate = () => {
     const newErrors = {};
@@ -43,7 +46,6 @@ export default function SignUp() {
     }
 
     if (!form.location.trim()) newErrors.location = "Location is required.";
-
     if (!agreed) newErrors.agreed = "You must agree to the terms to continue.";
 
     return newErrors;
@@ -77,13 +79,17 @@ export default function SignUp() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
+
       {/* Top nav */}
       <nav className="flex items-center justify-between px-6 md:px-12 py-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
         <button
           onClick={() => navigate("/")}
-          className="text-xl font-bold text-blue-600"
+          className="flex items-center gap-2"
         >
-          LocalHelp
+          <LocalHelpLogo size={28} />
+          <span className="text-lg font-extrabold bg-gradient-to-r from-orange-500 to-blue-600 bg-clip-text text-transparent">
+            LocalHelp
+          </span>
         </button>
         <span className="text-sm text-gray-500 dark:text-gray-400">
           Already have an account?{" "}
@@ -130,6 +136,7 @@ export default function SignUp() {
           </div>
 
           <form onSubmit={handleSubmit} noValidate className="space-y-4">
+
             {/* Full Name */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
@@ -195,14 +202,23 @@ export default function SignUp() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                 Password
               </label>
-              <input
-                type="password"
-                name="password"
-                value={form.password}
-                onChange={handleChange}
-                placeholder="At least 6 characters"
-                className={inputClass("password")}
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="At least 6 characters"
+                  className={`${inputClass("password")} pr-10`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xs"
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
               {errors.password && (
                 <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
                   <span>●</span> {errors.password}
@@ -234,14 +250,23 @@ export default function SignUp() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                 Confirm password
               </label>
-              <input
-                type="password"
-                name="confirmPassword"
-                value={form.confirmPassword}
-                onChange={handleChange}
-                placeholder="••••••••"
-                className={inputClass("confirmPassword")}
-              />
+              <div className="relative">
+                <input
+                  type={showConfirm ? "text" : "password"}
+                  name="confirmPassword"
+                  value={form.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="••••••••"
+                  className={`${inputClass("confirmPassword")} pr-10`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirm(!showConfirm)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xs"
+                >
+                  {showConfirm ? "Hide" : "Show"}
+                </button>
+              </div>
               {errors.confirmPassword && (
                 <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
                   <span>●</span> {errors.confirmPassword}
@@ -285,11 +310,11 @@ export default function SignUp() {
               )}
             </div>
 
-            {/* Submit */}
+            {/* Submit — gradient for SignUp */}
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-semibold py-3 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 mt-2"
+              className="w-full bg-gradient-to-r from-orange-500 to-blue-600 hover:from-orange-600 hover:to-blue-700 disabled:opacity-60 text-white font-semibold py-3 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 mt-2 shadow-sm"
             >
               {loading ? (
                 <>
@@ -297,7 +322,7 @@ export default function SignUp() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                   </svg>
-                  Creating account...
+                  Creating account…
                 </>
               ) : (
                 "Create account"

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import { useAuth } from "../context/AuthContext";
+import LocalHelpLogo from "../components/LocalHelpLogo";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -11,6 +12,7 @@ export default function Login() {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
   const [authError, setAuthError] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const validate = () => {
     const newErrors = {};
@@ -41,7 +43,7 @@ export default function Login() {
       return;
     }
     setLoading(true);
-    await new Promise((r) => setTimeout(r, 800)); // simulate loading
+    await new Promise((r) => setTimeout(r, 800));
     const result = login(form.email, form.password);
     setLoading(false);
     if (result.success) {
@@ -53,20 +55,21 @@ export default function Login() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
+
       {/* Top nav */}
       <nav className="flex items-center justify-between px-6 md:px-12 py-4 border-b border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900">
         <button
           onClick={() => navigate("/")}
-          className="text-xl font-bold text-blue-600"
+          className="flex items-center gap-2"
         >
-          LocalHelp
+          <LocalHelpLogo size={28} />
+          <span className="text-lg font-extrabold bg-gradient-to-r from-orange-500 to-blue-600 bg-clip-text text-transparent">
+            LocalHelp
+          </span>
         </button>
         <span className="text-sm text-gray-500 dark:text-gray-400">
           Don't have an account?{" "}
-          <Link
-            to="/signup"
-            className="text-blue-600 font-semibold hover:underline"
-          >
+          <Link to="/signup" className="text-blue-600 font-semibold hover:underline">
             Sign up
           </Link>
         </span>
@@ -102,6 +105,7 @@ export default function Login() {
           )}
 
           <form onSubmit={handleSubmit} noValidate className="space-y-5">
+
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
@@ -139,18 +143,27 @@ export default function Login() {
                   Forgot password?
                 </button>
               </div>
-              <input
-                type="password"
-                name="password"
-                value={form.password}
-                onChange={handleChange}
-                placeholder="••••••••"
-                className={`w-full px-4 py-2.5 rounded-xl border text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 transition-all ${
-                  errors.password
-                    ? "border-red-400 focus:ring-red-300"
-                    : "border-gray-200 dark:border-gray-700 focus:ring-blue-400"
-                }`}
-              />
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  name="password"
+                  value={form.password}
+                  onChange={handleChange}
+                  placeholder="••••••••"
+                  className={`w-full px-4 py-2.5 pr-10 rounded-xl border text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 transition-all ${
+                    errors.password
+                      ? "border-red-400 focus:ring-red-300"
+                      : "border-gray-200 dark:border-gray-700 focus:ring-blue-400"
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 text-xs"
+                >
+                  {showPassword ? "Hide" : "Show"}
+                </button>
+              </div>
               {errors.password && (
                 <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
                   <span>●</span> {errors.password}
@@ -170,7 +183,7 @@ export default function Login() {
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
                   </svg>
-                  Logging in...
+                  Logging in…
                 </>
               ) : (
                 "Log in"

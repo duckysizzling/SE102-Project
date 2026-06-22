@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useHelpers } from "../context/HelperContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { getTier } from "../data/MockData";
+import ChatDrawer from "../components/ChatDrawer.jsx";
 
 const TIER_BADGE_STYLE = {
   Bronze: "bg-orange-100 text-orange-900 dark:bg-orange-950/50 dark:text-orange-300",
@@ -46,7 +47,7 @@ export default function HelperProfileModal() {
   const location = useLocation();
   const { helpers, getHelperAvatar } = useHelpers();
   const { user } = useAuth();
-  const [chatToast, setChatToast] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   const baseHelper = helpers.find((h) => String(h.id) === String(id));
   const backgroundLocation = location.state?.backgroundLocation;
@@ -60,26 +61,29 @@ export default function HelperProfileModal() {
   };
 
   const handleChat = () => {
-    setChatToast(true);
-    setTimeout(() => setChatToast(false), 2200);
+    if (!user) {
+      navigate("/login");
+      return;
+    }
+    setChatOpen(true);
   };
 
-  if (!baseHelper) {
-    return null;
-  }
+  if (!baseHelper) return null;
 
   const tier = getTier(baseHelper.jobsDone);
   const avatarSrc = getHelperAvatar(baseHelper, user);
   const bannerGradient = CATEGORY_BANNER_GRADIENT[baseHelper.category] || "from-gray-500 to-gray-700";
-  const coverPhoto = baseHelper.coverPhoto || null;
+  const isOwnCard = user && String(baseHelper.userId) === String(user.id);
+  const coverPhoto = isOwnCard ? (user.coverPhoto || null) : (baseHelper.coverPhoto || null);
 
   return (
     <AnimatePresence>
+      {/* Backdrop — clicking it closes the modal (not the chat drawer) */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        onClick={handleClose}
+        onClick={() => { if (!chatOpen) handleClose(); }}
         className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center px-4 py-8 z-50"
       >
         <motion.div
@@ -90,7 +94,7 @@ export default function HelperProfileModal() {
           onClick={(e) => e.stopPropagation()}
           className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col"
         >
-          {/* Banner — photo if set, gradient fallback otherwise */}
+          {/* Banner */}
           <div
             className={`relative h-40 flex-shrink-0 rounded-t-2xl overflow-hidden ${coverPhoto ? "" : `bg-gradient-to-br ${bannerGradient}`}`}
             style={coverPhoto ? { backgroundImage: `url(${coverPhoto})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
@@ -104,7 +108,7 @@ export default function HelperProfileModal() {
             </button>
           </div>
 
-          {/* Avatar sits OUTSIDE the scroll container so overflow-y-auto doesn't clip it */}
+          {/* Avatar sits outside scroll container */}
           <div className="px-6 -mt-12 relative z-10">
             <img
               src={avatarSrc}
@@ -164,8 +168,8 @@ export default function HelperProfileModal() {
 
             {/* Actions */}
             <div className="grid grid-cols-3 gap-2 mt-5 pt-5 border-t border-gray-100 dark:border-gray-800">
-
-              <a href={`tel:${baseHelper.contact}`}
+              <a
+                href={`tel:${baseHelper.contact}`}
                 className="text-center text-sm font-semibold bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-gray-100 dark:text-gray-900 text-white px-3 py-2.5 rounded-xl transition-all active:scale-95"
               >
                 📞 Contact
@@ -187,19 +191,14 @@ export default function HelperProfileModal() {
         </motion.div>
       </motion.div>
 
-      {/* Chat coming soon toast */}
-      <AnimatePresence>
-        {chatToast && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium px-4 py-2.5 rounded-xl shadow-lg z-[60]"
-          >
-            💬 Chat feature coming soon!
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Chat Drawer — z-[60] so it sits above the modal backdrop (z-50) */}
+      <ChatDrawer
+        open={chatOpen}
+        onClose={() => setChatOpen(false)}
+        helper={baseHelper}
+        currentUser={user}
+        avatarSrc={avatarSrc}
+      />
     </AnimatePresence>
   );
 }

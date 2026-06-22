@@ -8,6 +8,7 @@ import { CATEGORIES, getTier } from "../data/MockData";
 import { useHelpers } from "../context/HelperContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useNavigate, useLocation } from "react-router-dom";
+import RequireLogin from "../components/RequireLogin.jsx";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -101,12 +102,13 @@ const TIER_ACCENT = {
   Gold: "bg-[#F0C420]",
   Platinum: "bg-emerald-500",
 };
+
 const TIER_BORDER_COLOR = {
   Bronze: "#8B5A2B",
   Silver: "#9CA3AF",
   Gold: "#F0C420",
   Platinum: "#10B981",
-  Diamond: "transparent", // Diamond keeps its own special gradient border below
+  Diamond: "transparent",
 };
 
 function getDistance(lat1, lng1, lat2, lng2) {
@@ -123,7 +125,6 @@ function getDistance(lat1, lng1, lat2, lng2) {
 
 function MapFlyController({ selectedHelper, userPos }) {
   const map = useMap();
-
   useEffect(() => {
     if (selectedHelper) {
       map.flyTo([selectedHelper.lat, selectedHelper.lng], 16, { duration: 1.1 });
@@ -131,7 +132,6 @@ function MapFlyController({ selectedHelper, userPos }) {
       map.flyTo([userPos.lat, userPos.lng], 12, { duration: 1.1 });
     }
   }, [selectedHelper, userPos, map]);
-
   return null;
 }
 
@@ -161,8 +161,9 @@ function HelperCard({ helper, isSelected, onSelect, onView, userPos, avatarSrc }
     <motion.div
       whileHover={{ y: -2 }}
       onClick={onSelect}
-      className={`relative bg-white dark:bg-gray-900 rounded-2xl p-4 pl-5 cursor-pointer transition-all hover:shadow-lg overflow-hidden border ${isSelected ? "ring-2 ring-blue-400 dark:ring-blue-600 shadow-lg" : ""
-        }`}
+      className={`relative bg-white dark:bg-gray-900 rounded-2xl p-4 pl-5 cursor-pointer transition-all hover:shadow-lg overflow-hidden border ${
+        isSelected ? "ring-2 ring-blue-400 dark:ring-blue-600 shadow-lg" : ""
+      }`}
       style={{ borderColor: TIER_BORDER_COLOR[tier.label] }}
     >
       {tier.label === "Diamond" ? (
@@ -193,8 +194,9 @@ function HelperCard({ helper, isSelected, onSelect, onView, userPos, avatarSrc }
             className="w-14 h-14 rounded-full object-cover"
           />
           <span
-            className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-gray-900 ${helper.available ? "bg-green-400" : "bg-gray-300"
-              }`}
+            className={`absolute -bottom-1 -right-1 w-3.5 h-3.5 rounded-full border-2 border-white dark:border-gray-900 ${
+              helper.available ? "bg-green-400" : "bg-gray-300"
+            }`}
           />
         </div>
 
@@ -222,22 +224,13 @@ function HelperCard({ helper, isSelected, onSelect, onView, userPos, avatarSrc }
           <div className="flex items-center gap-3 mt-1.5 flex-wrap">
             <span className="flex items-center gap-1 text-sm text-amber-500 font-semibold">
               ★ {helper.rating}
-              <span className="text-gray-400 font-normal text-xs">
-                ({helper.reviews})
-              </span>
+              <span className="text-gray-400 font-normal text-xs">({helper.reviews})</span>
             </span>
-            <span className="text-xs text-gray-400">
-              {helper.jobsDone} jobs done
-            </span>
+            <span className="text-xs text-gray-400">{helper.jobsDone} jobs done</span>
             {dist && (
-              <span className="text-xs text-blue-500 font-medium">
-                📍 {dist} km away
-              </span>
+              <span className="text-xs text-blue-500 font-medium">📍 {dist} km away</span>
             )}
-            <span
-              className={`text-xs font-medium ${helper.available ? "text-green-500" : "text-gray-400"
-                }`}
-            >
+            <span className={`text-xs font-medium ${helper.available ? "text-green-500" : "text-gray-400"}`}>
               {helper.available ? "● Available" : "○ Unavailable"}
             </span>
           </div>
@@ -259,9 +252,7 @@ function HelperCard({ helper, isSelected, onSelect, onView, userPos, avatarSrc }
             <span className="font-semibold text-gray-900 dark:text-white">
               ₱{helper.rate.toLocaleString()}
             </span>
-            <span className="text-xs text-gray-400 block">
-              {helper.rateUnit}
-            </span>
+            <span className="text-xs text-gray-400 block">{helper.rateUnit}</span>
           </div>
           <button
             onClick={(e) => {
@@ -278,12 +269,99 @@ function HelperCard({ helper, isSelected, onSelect, onView, userPos, avatarSrc }
   );
 }
 
+// ── Skeleton card shown while results are "loading" ───────────────────────────
+function HelperCardSkeleton() {
+  return (
+    <div className="relative bg-white dark:bg-gray-900 rounded-2xl p-4 pl-5 overflow-hidden border border-gray-100 dark:border-gray-800">
+      <div className="absolute left-0 top-0 bottom-0 w-1.5 bg-gray-100 dark:bg-gray-800" />
+      <div className="flex items-center gap-4 animate-pulse">
+        <div className="w-14 h-14 rounded-full bg-gray-200 dark:bg-gray-800 flex-shrink-0" />
+        <div className="flex-1 min-w-0 space-y-2">
+          <div className="h-4 w-32 bg-gray-200 dark:bg-gray-800 rounded" />
+          <div className="h-3 w-44 bg-gray-200 dark:bg-gray-800 rounded" />
+          <div className="h-3 w-28 bg-gray-200 dark:bg-gray-800 rounded" />
+          <div className="flex gap-1.5 mt-2">
+            <div className="h-5 w-14 bg-gray-200 dark:bg-gray-800 rounded-full" />
+            <div className="h-5 w-14 bg-gray-200 dark:bg-gray-800 rounded-full" />
+            <div className="h-5 w-14 bg-gray-200 dark:bg-gray-800 rounded-full" />
+          </div>
+        </div>
+        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+          <div className="h-4 w-16 bg-gray-200 dark:bg-gray-800 rounded" />
+          <div className="h-8 w-16 bg-gray-200 dark:bg-gray-800 rounded-xl" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Guest login prompt modal ──────────────────────────────────────────────────
+function GuestPromptModal({ onClose }) {
+  const navigate = useNavigate();
+  return (
+    <AnimatePresence>
+      <motion.div
+        className="fixed inset-0 z-50 flex items-center justify-center px-4"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+      >
+        {/* Backdrop */}
+        <motion.div
+          className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+          onClick={onClose}
+        />
+        {/* Card */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95, y: 16 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95, y: 16 }}
+          transition={{ duration: 0.25 }}
+          className="relative z-10 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-8 max-w-sm w-full shadow-xl text-center"
+        >
+          <div className="w-14 h-14 mx-auto rounded-full bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-2xl mb-4">
+            🔒
+          </div>
+          <h2 className="text-lg font-bold text-gray-900 dark:text-white">
+            Log in to view helper profiles
+          </h2>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1.5 leading-relaxed">
+            Create a free account or log in to connect with local helpers.
+          </p>
+          <div className="flex gap-2 mt-6 justify-center">
+            <button
+              onClick={() => navigate("/login")}
+              className="text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl transition-all active:scale-95"
+            >
+              Log In
+            </button>
+            <button
+              onClick={() => navigate("/signup")}
+              className="text-sm font-semibold bg-gradient-to-r from-orange-500 to-blue-600 hover:from-orange-600 hover:to-blue-700 text-white px-5 py-2.5 rounded-xl transition-all active:scale-95"
+            >
+              Sign Up Free
+            </button>
+          </div>
+          <button
+            onClick={onClose}
+            className="text-xs text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 mt-4 transition-colors"
+          >
+            Maybe later
+          </button>
+        </motion.div>
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
 export default function FindHelper() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [q, setQ] = useState("");
   const { helpers, getHelperAvatar } = useHelpers();
   const { user } = useAuth();
+
+  const [q, setQ] = useState("");
   const [category, setCategory] = useState("All");
   const [sort, setSort] = useState("rating");
   const [availableOnly, setAvailableOnly] = useState(false);
@@ -293,6 +371,23 @@ export default function FindHelper() {
   const [gpsLoading, setGpsLoading] = useState(false);
   const [gpsError, setGpsError] = useState("");
   const [radius, setRadius] = useState(15);
+  const [showGuestModal, setShowGuestModal] = useState(false);
+
+  // Simulated initial fetch delay — shows skeleton cards before "data" appears
+  const [loading, setLoading] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setLoading(false), 800);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // If guest tries a gated action, show modal instead
+  const gatedAction = (fn) => {
+    if (!user) {
+      setShowGuestModal(true);
+      return;
+    }
+    fn();
+  };
 
   const handleGPS = () => {
     if (!navigator.geolocation) {
@@ -340,10 +435,8 @@ export default function FindHelper() {
   const relatedSuggestions = (() => {
     const query = q.toLowerCase().trim();
     if (!query || filtered.length > 2) return [];
-
     const queryWords = query.split(/\s+/).filter((w) => w.length > 2);
     const matches = new Set();
-
     helpers.forEach((h) => {
       const searchableTerms = [h.category, ...h.tags];
       searchableTerms.forEach((term) => {
@@ -351,12 +444,9 @@ export default function FindHelper() {
         const isRelated = queryWords.some(
           (qw) => termLower.includes(qw) || qw.includes(termLower)
         );
-        if (isRelated && !termLower.includes(query)) {
-          matches.add(term);
-        }
+        if (isRelated && !termLower.includes(query)) matches.add(term);
       });
     });
-
     return Array.from(matches).slice(0, 4);
   })();
 
@@ -366,17 +456,27 @@ export default function FindHelper() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+      {/* Guest modal */}
+      {showGuestModal && <GuestPromptModal onClose={() => setShowGuestModal(false)} />}
+
       <div className="w-full mx-auto px-4 py-5">
 
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl text-gray-900 dark:text-white">
-              Find a helper
-            </h1>
+            <h1 className="text-2xl text-gray-900 dark:text-white">Find a helper</h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-              {filtered.length} helper{filtered.length !== 1 ? "s" : ""} found
-              {category !== "All" ? ` in ${category}` : ""}
+              {loading ? "Loading helpers..." : (
+                <>
+                  {filtered.length} helper{filtered.length !== 1 ? "s" : ""} found
+                  {category !== "All" ? ` in ${category}` : ""}
+                </>
+              )}
+              {!loading && !user && (
+                <span className="ml-2 text-blue-500 font-medium">
+                  · <button onClick={() => setShowGuestModal(true)} className="hover:underline">Log in to connect</button>
+                </span>
+              )}
             </p>
           </div>
 
@@ -399,10 +499,11 @@ export default function FindHelper() {
                 onClick={handleGPS}
                 disabled={gpsLoading}
                 whileTap={{ scale: 0.97 }}
-                className={`relative flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-xl transition-all disabled:opacity-60 overflow-hidden ${userPos
-                  ? "text-white"
-                  : "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600"
-                  }`}
+                className={`relative flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-xl transition-all disabled:opacity-60 overflow-hidden ${
+                  userPos
+                    ? "text-white"
+                    : "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600"
+                }`}
                 style={
                   userPos
                     ? { background: "linear-gradient(120deg, #f97316, #ec4899, #3b82f6)" }
@@ -507,7 +608,6 @@ export default function FindHelper() {
         </AnimatePresence>
 
         <div className="flex flex-col lg:flex-row gap-6">
-
           <div className="flex-1 min-w-0">
 
             {/* Search */}
@@ -536,10 +636,11 @@ export default function FindHelper() {
                 <button
                   key={cat}
                   onClick={() => setCategory(cat)}
-                  className={`text-xs font-medium px-3.5 py-1.5 rounded-full transition-all ${category === cat
-                    ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
-                    : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
-                    }`}
+                  className={`text-xs font-medium px-3.5 py-1.5 rounded-full transition-all ${
+                    category === cat
+                      ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
+                      : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                  }`}
                 >
                   {cat}
                 </button>
@@ -551,11 +652,18 @@ export default function FindHelper() {
               <label className="flex items-center gap-2.5 cursor-pointer select-none">
                 <div
                   onClick={() => setAvailableOnly((v) => !v)}
-                  className={`w-9 h-5 rounded-full transition-all relative ${availableOnly ? "bg-gray-900 dark:bg-white" : "bg-gray-200 dark:bg-gray-700"
-                    }`}
+                  className={`w-9 h-5 rounded-full transition-all relative ${
+                    availableOnly
+                      ? "bg-gray-900 dark:bg-white"
+                      : "bg-gray-200 dark:bg-gray-700"
+                  }`}
                 >
                   <div
-                    className="absolute top-0.5 w-4 h-4 rounded-full shadow transition-all bg-white"
+                    className={`absolute top-0.5 w-4 h-4 rounded-full shadow transition-all ${
+                      availableOnly
+                        ? "bg-white dark:bg-gray-900"
+                        : "bg-white dark:bg-gray-400"
+                    }`}
                     style={{ left: availableOnly ? "18px" : "2px" }}
                   />
                 </div>
@@ -579,9 +687,22 @@ export default function FindHelper() {
 
             {/* Results */}
             <div className="space-y-3">
-              <AnimatePresence>
-                {filtered.length === 0 ? (
+              <AnimatePresence mode="wait">
+                {loading ? (
                   <motion.div
+                    key="skeleton"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="space-y-3"
+                  >
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <HelperCardSkeleton key={i} />
+                    ))}
+                  </motion.div>
+                ) : filtered.length === 0 ? (
+                  <motion.div
+                    key="empty"
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     className="text-center py-16 text-gray-400 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800"
@@ -589,7 +710,6 @@ export default function FindHelper() {
                     <div className="text-4xl mb-3 opacity-40">⌕</div>
                     <p className="font-medium text-gray-600 dark:text-gray-300">No helpers found</p>
                     <p className="text-sm mt-1">Try a different search or category.</p>
-
                     {relatedSuggestions.length > 0 && (
                       <div className="mt-4">
                         <p className="text-xs text-gray-400 mb-2">You might be looking for:</p>
@@ -606,7 +726,6 @@ export default function FindHelper() {
                         </div>
                       </div>
                     )}
-
                     <button
                       onClick={() => { setQ(""); setCategory("All"); setAvailableOnly(false); }}
                       className="mt-4 text-sm text-blue-600 hover:underline"
@@ -615,34 +734,38 @@ export default function FindHelper() {
                     </button>
                   </motion.div>
                 ) : (
-                  filtered.map((helper, i) => {
-                    const isSelected = selectedHelper?.id === helper.id;
-                    return (
-                      <motion.div
-                        key={helper.id}
-                        initial={{ opacity: 0, y: 16 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -8 }}
-                        transition={{ delay: i * 0.05 }}
-                      >
-                        <HelperCard
-                          helper={helper}
-                          isSelected={isSelected}
-                          userPos={userPos}
-                          avatarSrc={getHelperAvatar(helper, user)}
-                          onSelect={() => {
-                            setSelectedHelper(isSelected ? null : helper);
-                            if (!showMap) setShowMap(true);
-                          }}
-                          onView={() =>
-  navigate(`/helper/${helper.id}`, {
-    state: { backgroundLocation: location },
-  })
-}
-                        />
-                      </motion.div>
-                    );
-                  })
+                  <motion.div key="results" className="space-y-3">
+                    {filtered.map((helper, i) => {
+                      const isSelected = selectedHelper?.id === helper.id;
+                      return (
+                        <motion.div
+                          key={helper.id}
+                          initial={{ opacity: 0, y: 16 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -8 }}
+                          transition={{ delay: i * 0.05 }}
+                        >
+                          <HelperCard
+                            helper={helper}
+                            isSelected={isSelected}
+                            userPos={userPos}
+                            avatarSrc={getHelperAvatar(helper, user)}
+                            onSelect={() => {
+                              setSelectedHelper(isSelected ? null : helper);
+                              if (!showMap) setShowMap(true);
+                            }}
+                            onView={() =>
+                              gatedAction(() =>
+                                navigate(`/helper/${helper.id}`, {
+                                  state: { backgroundLocation: location },
+                                })
+                              )
+                            }
+                          />
+                        </motion.div>
+                      );
+                    })}
+                  </motion.div>
                 )}
               </AnimatePresence>
             </div>
@@ -746,7 +869,6 @@ export default function FindHelper() {
               </motion.div>
             )}
           </AnimatePresence>
-
         </div>
       </div>
     </div>

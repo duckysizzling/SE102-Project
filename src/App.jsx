@@ -5,6 +5,7 @@ import { HelperProvider } from "./context/HelperContext.jsx";
 import { PostsProvider } from "./context/PostsContext.jsx";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
+import BackToTop from "./components/BackToTop.jsx";
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
 import SignUp from "./pages/SignUp";
@@ -30,8 +31,6 @@ function AppLayout({ children }) {
 
 function AppRoutes() {
   const location = useLocation();
-  // If navigation included a "background" location, we render the
-  // routes for that background page, then layer the modal route on top.
   const backgroundLocation = location.state?.backgroundLocation;
 
   return (
@@ -106,6 +105,8 @@ function AppRoutes() {
           <Route path="/helper/:id" element={<HelperProfileModal />} />
         </Routes>
       )}
+
+      <BackToTop />
     </>
   );
 }

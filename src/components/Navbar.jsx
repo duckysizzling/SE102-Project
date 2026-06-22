@@ -1,8 +1,17 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
+import { Search, Megaphone, PlusCircle, Info, Sun, Moon, LogOut } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
+import LocalHelpLogo from "./LocalHelpLogo.jsx";
+
+const NAV_ITEMS = [
+  { to: "/find", label: "Find", icon: Search },
+  { to: "/whatsnew", label: "What's New", icon: Megaphone },
+  { to: "/post", label: "Post a Service", icon: PlusCircle },
+  { to: "/about", label: "About", icon: Info },
+];
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -12,17 +21,21 @@ export default function Navbar() {
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-  const navLink = (to, label, onClick) => (
+  // Desktop nav link: icon + label, label fades away on narrower
+  // viewports (xl breakpoint) so only the icon stays visible —
+  // a softer collapse than jumping straight to the hamburger.
+  const navLink = (to, label, Icon, onClick) => (
     <Link
       to={to}
       onClick={onClick}
-      className={`text-sm font-medium transition-colors ${
-        location.pathname === to
-          ? "text-blue-600 dark:text-blue-400 border-b-2 border-blue-600 dark:border-blue-400 pb-0.5"
+      title={label}
+      className={`flex items-center gap-1.5 text-sm font-medium transition-colors ${location.pathname === to
+          ? "text-blue-600 dark:text-blue-400"
           : "text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
-      }`}
+        }`}
     >
-      {label}
+      <Icon size={17} strokeWidth={2} />
+      <span className="hidden xl:inline">{label}</span>
     </Link>
   );
 
@@ -38,26 +51,43 @@ export default function Navbar() {
   return (
     <>
       <nav className="bg-white dark:bg-gray-900 border-b border-gray-100 dark:border-gray-800 sticky top-0 z-50">
-        <div className="w-full px-4 md:px-6 flex items-center justify-between py-3.5">
-          <Link to="/" className="text-xl font-extrabold text-blue-600">
-            LocalHelp
+        <div className="w-full px-4 md:px-6 flex items-center justify-between py-3">
+          <Link to="/" className="flex items-center gap-2 flex-shrink-0">
+            <LocalHelpLogo size={30} />
+            <span className="text-xl font-extrabold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+              LocalHelp
+            </span>
           </Link>
 
-          {/* Desktop nav links — hidden on mobile */}
-          <div className="hidden lg:flex items-center gap-5">
-            {navLink("/find", "Find")}
-            {navLink("/whatsnew", "What's New")}
-            {navLink("/post", "Post a Service")}
-            {navLink("/about", "About")}
+          {/* Desktop nav links — hidden on mobile, icon-only between md and xl */}
+          <div className="hidden md:flex items-center gap-4 lg:gap-5">
+            {NAV_ITEMS.map((item) => (
+              <span key={item.to}>
+                {navLink(item.to, item.label, item.icon)}
+              </span>
+            ))}
 
             {user ? (
               <>
-                {navLink("/profile", "Profile")}
+                <Link
+                  to="/profile"
+                  title="Profile"
+                  className={`flex items-center gap-1.5 ${location.pathname === "/profile" ? "ring-2 ring-blue-500" : "ring-2 ring-transparent hover:ring-blue-300 dark:hover:ring-blue-700"
+                    } rounded-full transition-all`}
+                >
+                  <img
+                    src={user.avatar}
+                    alt={user.name}
+                    className="w-8 h-8 rounded-full object-cover"
+                  />
+                </Link>
                 <button
                   onClick={() => setConfirmLogout(true)}
-                  className="text-sm font-medium text-red-500 hover:text-red-600 transition-colors"
+                  title="Logout"
+                  className="flex items-center gap-1.5 text-sm font-medium text-red-500 hover:text-red-600 transition-colors"
                 >
-                  Logout
+                  <LogOut size={17} strokeWidth={2} />
+                  <span className="hidden xl:inline">Logout</span>
                 </button>
               </>
             ) : (
@@ -79,21 +109,29 @@ export default function Navbar() {
 
             <button
               onClick={toggleDarkMode}
-              className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:border-blue-400 transition-all text-lg"
+              className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:border-blue-400 transition-all text-gray-600 dark:text-gray-300"
               title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
             >
-              {darkMode ? "☀️" : "🌙"}
+              {darkMode ? <Sun size={17} strokeWidth={2} /> : <Moon size={17} strokeWidth={2} />}
             </button>
           </div>
 
-          {/* Mobile: dark mode toggle + hamburger button */}
-          <div className="flex items-center gap-2 lg:hidden">
+          {/* Mobile: avatar/dark mode toggle + hamburger button */}
+          <div className="flex items-center gap-2 md:hidden">
+            {user && (
+              <img
+                src={user.avatar}
+                alt={user.name}
+                onClick={() => navigate("/profile")}
+                className="w-8 h-8 rounded-full object-cover cursor-pointer"
+              />
+            )}
             <button
               onClick={toggleDarkMode}
-              className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:border-blue-400 transition-all text-lg"
+              className="w-9 h-9 flex items-center justify-center rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 hover:border-blue-400 transition-all text-gray-600 dark:text-gray-300"
               title={darkMode ? "Switch to light mode" : "Switch to dark mode"}
             >
-              {darkMode ? "☀️" : "🌙"}
+              {darkMode ? <Sun size={17} strokeWidth={2} /> : <Moon size={17} strokeWidth={2} />}
             </button>
             <button
               onClick={() => setMobileMenuOpen((v) => !v)}
@@ -125,21 +163,46 @@ export default function Navbar() {
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              className="lg:hidden overflow-hidden border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900"
+              className="md:hidden overflow-hidden border-t border-gray-100 dark:border-gray-800 bg-white dark:bg-gray-900"
             >
               <div className="flex flex-col px-4 py-4 gap-4">
-                {navLink("/find", "Find", closeMobileMenu)}
-                {navLink("/whatsnew", "What's New", closeMobileMenu)}
-                {navLink("/post", "Post a Service", closeMobileMenu)}
-                {navLink("/about", "About", closeMobileMenu)}
+                {NAV_ITEMS.map((item) => (
+                  <Link
+                    key={item.to}
+                    to={item.to}
+                    onClick={closeMobileMenu}
+                    className={`flex items-center gap-2.5 text-sm font-medium transition-colors ${location.pathname === item.to
+                        ? "text-blue-600 dark:text-blue-400"
+                        : "text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
+                      }`}
+                  >
+                    <item.icon size={18} strokeWidth={2} />
+                    {item.label}
+                  </Link>
+                ))}
 
                 {user ? (
                   <>
-                    {navLink("/profile", "Profile", closeMobileMenu)}
+                    <Link
+                      to="/profile"
+                      onClick={closeMobileMenu}
+                      className={`flex items-center gap-2.5 text-sm font-medium transition-colors ${location.pathname === "/profile"
+                          ? "text-blue-600 dark:text-blue-400"
+                          : "text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400"
+                        }`}
+                    >
+                      <img
+                        src={user.avatar}
+                        alt={user.name}
+                        className="w-[18px] h-[18px] rounded-full object-cover"
+                      />
+                      Profile
+                    </Link>
                     <button
                       onClick={() => setConfirmLogout(true)}
-                      className="text-sm font-medium text-red-500 hover:text-red-600 transition-colors text-left"
+                      className="flex items-center gap-2.5 text-sm font-medium text-red-500 hover:text-red-600 transition-colors text-left"
                     >
+                      <LogOut size={18} strokeWidth={2} />
                       Logout
                     </button>
                   </>

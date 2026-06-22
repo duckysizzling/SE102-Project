@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import LocalHelpLogo from "../components/LocalHelpLogo.jsx";
 
 const CATEGORIES = [
   { icon: "🔧", label: "Plumber" },
@@ -63,6 +64,45 @@ const fadeUp = {
   }),
 };
 
+// ── Animated hero blobs ─────────────────────────────────────────────────────
+// Fix: blobs use solid bg colors (not gradients) so blur renders visibly.
+// The wrapper has overflow-hidden so they don't spill into other sections,
+// but the section itself does NOT have overflow-hidden so the blobs aren't
+// clipped before they even start.
+function HeroBackground() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {/* Orange blob — top-left area */}
+      <motion.div
+        className="absolute -top-10 left-1/2 -translate-x-[65%]
+          w-[360px] h-[360px] sm:w-[520px] sm:h-[520px] md:w-[680px] md:h-[580px]
+          bg-orange-300 dark:bg-orange-800
+          rounded-full blur-[100px] sm:blur-[130px] opacity-50 dark:opacity-25"
+        animate={{ x: [0, 30, -10, 0], y: [0, 20, -10, 0] }}
+        transition={{ duration: 14, repeat: Infinity, ease: "easeInOut" }}
+      />
+      {/* Pink blob — top-center */}
+      <motion.div
+        className="absolute top-10 left-1/2 -translate-x-[45%]
+          w-[320px] h-[320px] sm:w-[480px] sm:h-[460px] md:w-[620px] md:h-[520px]
+          bg-pink-300 dark:bg-pink-800
+          rounded-full blur-[100px] sm:blur-[130px] opacity-45 dark:opacity-20"
+        animate={{ x: [0, -25, 15, 0], y: [0, -15, 10, 0] }}
+        transition={{ duration: 17, repeat: Infinity, ease: "easeInOut" }}
+      />
+      {/* Blue blob — top-right area */}
+      <motion.div
+        className="absolute top-0 left-1/2 -translate-x-[15%]
+          w-[340px] h-[340px] sm:w-[500px] sm:h-[480px] md:w-[640px] md:h-[540px]
+          bg-blue-300 dark:bg-blue-800
+          rounded-full blur-[100px] sm:blur-[130px] opacity-50 dark:opacity-25"
+        animate={{ x: [0, 20, -25, 0], y: [0, 25, -5, 0] }}
+        transition={{ duration: 20, repeat: Infinity, ease: "easeInOut" }}
+      />
+    </div>
+  );
+}
+
 export default function Landing() {
   const navigate = useNavigate();
 
@@ -70,36 +110,38 @@ export default function Landing() {
     <div className="min-h-screen bg-white dark:bg-gray-950 text-gray-900 dark:text-gray-100 overflow-x-hidden">
 
       {/* NAV */}
-      <nav className="flex items-center justify-between px-6 md:px-12 py-4 border-b border-gray-100 dark:border-gray-800">
-        <span className="text-xl font-bold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
-          LocalHelp
+      <nav className="flex items-center justify-between px-4 sm:px-6 md:px-12 py-4 border-b border-gray-100 dark:border-gray-800">
+        <span className="flex items-center gap-2">
+          <LocalHelpLogo size={28} />
+          <span className="text-lg sm:text-xl font-bold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+            LocalHelp
+          </span>
         </span>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <button
             onClick={() => navigate("/login")}
-            className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+            className="text-xs sm:text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
           >
             Log in
           </button>
           <button
             onClick={() => navigate("/signup")}
-            className="text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl transition-all active:scale-95"
+            className="text-xs sm:text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white px-3 sm:px-4 py-2 rounded-xl transition-all active:scale-95"
           >
             Sign up free
           </button>
         </div>
       </nav>
 
-      {/* HERO */}
-      <section className="relative flex flex-col items-center text-center px-6 pt-20 pb-24 md:pt-28 md:pb-32 overflow-hidden">
-        {/* Signature gradient glow — the one bold moment */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[450px] bg-gradient-to-br from-orange-300 via-pink-200 to-blue-300 dark:from-orange-900/40 dark:via-pink-900/20 dark:to-blue-900/40 rounded-full blur-[100px] opacity-50 pointer-events-none" />
+      {/* HERO — no overflow-hidden here, blobs live inside HeroBackground which has its own overflow-hidden wrapper */}
+      <section className="relative flex flex-col items-center text-center px-4 sm:px-6 pt-14 pb-16 sm:pt-20 sm:pb-24 md:pt-28 md:pb-32">
+        <HeroBackground />
 
         <motion.div
           initial="hidden"
           animate="show"
           variants={fadeUp}
-          className="relative z-10 inline-flex items-center gap-2 bg-gradient-to-r from-orange-50 to-blue-50 dark:from-orange-900/30 dark:to-blue-900/30 text-blue-700 dark:text-blue-300 text-sm font-medium px-4 py-1.5 rounded-full mb-6 border border-blue-100 dark:border-blue-800"
+          className="relative z-10 inline-flex items-center gap-2 bg-gradient-to-r from-orange-50 to-blue-50 dark:from-orange-900/30 dark:to-blue-900/30 text-blue-700 dark:text-blue-300 text-xs sm:text-sm font-medium px-3 sm:px-4 py-1.5 rounded-full mb-5 sm:mb-6 border border-blue-100 dark:border-blue-800"
         >
           <span className="w-2 h-2 rounded-full bg-gradient-to-r from-orange-500 to-blue-500 animate-pulse" />
           50+ verified helpers in Cavite
@@ -110,7 +152,7 @@ export default function Landing() {
           initial="hidden"
           animate="show"
           variants={fadeUp}
-          className="relative z-10 text-4xl md:text-6xl font-bold leading-tight tracking-tight max-w-3xl"
+          className="relative z-10 text-3xl sm:text-4xl md:text-6xl font-bold leading-tight tracking-tight max-w-3xl px-1"
         >
           Find trusted local help,{" "}
           <span className="bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
@@ -123,7 +165,7 @@ export default function Landing() {
           initial="hidden"
           animate="show"
           variants={fadeUp}
-          className="relative z-10 mt-5 text-lg text-gray-500 dark:text-gray-400 max-w-xl"
+          className="relative z-10 mt-4 sm:mt-5 text-base sm:text-lg text-gray-500 dark:text-gray-400 max-w-xl"
         >
           LocalHelp connects you with skilled helpers nearby — plumbers, tutors,
           drivers, and more. No agencies, no hassle.
@@ -134,7 +176,7 @@ export default function Landing() {
           initial="hidden"
           animate="show"
           variants={fadeUp}
-          className="relative z-10 mt-8 flex flex-col sm:flex-row items-center gap-3"
+          className="relative z-10 mt-7 sm:mt-8 flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto px-4 sm:px-0"
         >
           <button
             onClick={() => navigate("/signup")}
@@ -156,7 +198,7 @@ export default function Landing() {
           initial="hidden"
           animate="show"
           variants={fadeUp}
-          className="relative z-10 mt-14 flex flex-wrap justify-center gap-8 text-center"
+          className="relative z-10 mt-10 sm:mt-14 grid grid-cols-2 sm:flex sm:flex-wrap justify-center gap-x-6 gap-y-6 sm:gap-8 text-center max-w-xs sm:max-w-none"
         >
           {[
             { value: "50+", label: "Verified Helpers" },
@@ -165,25 +207,27 @@ export default function Landing() {
             { value: "Free", label: "To Join" },
           ].map((stat) => (
             <div key={stat.label}>
-              <div className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+              <div className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
                 {stat.value}
               </div>
-              <div className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{stat.label}</div>
+              <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                {stat.label}
+              </div>
             </div>
           ))}
         </motion.div>
       </section>
 
       {/* CATEGORIES */}
-      <section className="px-6 md:px-12 py-16 bg-gray-50 dark:bg-gray-900">
+      <section className="px-4 sm:px-6 md:px-12 py-12 sm:py-16 bg-gray-50 dark:bg-gray-900">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-2xl md:text-3xl text-center mb-2">
+          <h2 className="text-xl sm:text-2xl md:text-3xl text-center mb-2">
             What do you need help with?
           </h2>
-          <p className="text-center text-gray-500 dark:text-gray-400 mb-10">
+          <p className="text-center text-sm sm:text-base text-gray-500 dark:text-gray-400 mb-8 sm:mb-10">
             Browse by category and find the right person fast.
           </p>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
             {CATEGORIES.map((cat, i) => (
               <motion.button
                 key={cat.label}
@@ -193,10 +237,10 @@ export default function Landing() {
                 viewport={{ once: true }}
                 variants={fadeUp}
                 onClick={() => navigate("/find")}
-                className="flex flex-col items-center gap-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-5 hover:border-transparent hover:shadow-lg hover:shadow-blue-100 dark:hover:shadow-none hover:-translate-y-0.5 transition-all active:scale-95 group"
+                className="flex flex-col items-center gap-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-4 sm:p-5 hover:border-transparent hover:shadow-lg hover:shadow-blue-100 dark:hover:shadow-none hover:-translate-y-0.5 transition-all active:scale-95 group"
               >
-                <span className="text-3xl">{cat.icon}</span>
-                <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 group-hover:text-blue-600 transition-colors">
+                <span className="text-2xl sm:text-3xl">{cat.icon}</span>
+                <span className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-200 group-hover:text-blue-600 transition-colors">
                   {cat.label}
                 </span>
               </motion.button>
@@ -206,15 +250,15 @@ export default function Landing() {
       </section>
 
       {/* HOW IT WORKS */}
-      <section className="px-6 md:px-12 py-16">
+      <section className="px-4 sm:px-6 md:px-12 py-12 sm:py-16">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl md:text-3xl text-center mb-2">
+          <h2 className="text-xl sm:text-2xl md:text-3xl text-center mb-2">
             How LocalHelp works
           </h2>
-          <p className="text-center text-gray-500 dark:text-gray-400 mb-12">
+          <p className="text-center text-sm sm:text-base text-gray-500 dark:text-gray-400 mb-10 sm:mb-12">
             Three steps to finding the help you need.
           </p>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid sm:grid-cols-3 gap-6 sm:gap-8">
             {STEPS.map((step, i) => (
               <motion.div
                 key={step.number}
@@ -223,12 +267,12 @@ export default function Landing() {
                 whileInView="show"
                 viewport={{ once: true }}
                 variants={fadeUp}
-                className="relative flex flex-col items-start gap-3 p-6 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-sm"
+                className="relative flex flex-col items-start gap-3 p-5 sm:p-6 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-sm"
               >
-                <span className="text-4xl font-bold bg-gradient-to-br from-orange-400 to-blue-400 dark:from-orange-600 dark:to-blue-600 bg-clip-text text-transparent select-none opacity-90">
+                <span className="text-3xl sm:text-4xl font-bold bg-gradient-to-br from-orange-400 to-blue-400 dark:from-orange-600 dark:to-blue-600 bg-clip-text text-transparent select-none opacity-90">
                   {step.number}
                 </span>
-                <h3 className="text-lg -mt-2">{step.title}</h3>
+                <h3 className="text-base sm:text-lg -mt-2">{step.title}</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
                   {step.desc}
                 </p>
@@ -239,15 +283,15 @@ export default function Landing() {
       </section>
 
       {/* TESTIMONIALS */}
-      <section className="px-6 md:px-12 py-16 bg-gray-50 dark:bg-gray-900">
+      <section className="px-4 sm:px-6 md:px-12 py-12 sm:py-16 bg-gray-50 dark:bg-gray-900">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-2xl md:text-3xl text-center mb-2">
+          <h2 className="text-xl sm:text-2xl md:text-3xl text-center mb-2">
             What people are saying
           </h2>
-          <p className="text-center text-gray-500 dark:text-gray-400 mb-10">
+          <p className="text-center text-sm sm:text-base text-gray-500 dark:text-gray-400 mb-8 sm:mb-10">
             Real experiences from real LocalHelp users.
           </p>
-          <div className="grid md:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-3 gap-5 sm:gap-6">
             {TESTIMONIALS.map((t, i) => (
               <motion.div
                 key={t.name}
@@ -256,7 +300,7 @@ export default function Landing() {
                 whileInView="show"
                 viewport={{ once: true }}
                 variants={fadeUp}
-                className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-6 shadow-sm flex flex-col gap-4"
+                className="bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-5 sm:p-6 shadow-sm flex flex-col gap-4"
               >
                 <div className="flex text-yellow-400 text-sm">
                   {"★".repeat(t.rating)}
@@ -282,18 +326,18 @@ export default function Landing() {
       </section>
 
       {/* CTA BANNER */}
-      <section className="px-6 md:px-12 py-20">
+      <section className="px-4 sm:px-6 md:px-12 py-14 sm:py-20">
         <motion.div
           initial={{ opacity: 0, y: 32 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="max-w-3xl mx-auto text-center bg-gradient-to-br from-orange-500 via-pink-500 to-blue-600 rounded-3xl px-8 py-14 shadow-xl shadow-blue-200 dark:shadow-none"
+          className="max-w-3xl mx-auto text-center bg-gradient-to-br from-orange-500 via-pink-500 to-blue-600 rounded-3xl px-6 sm:px-8 py-10 sm:py-14 shadow-xl shadow-blue-200 dark:shadow-none"
         >
-          <h2 className="text-3xl md:text-4xl text-white mb-4">
+          <h2 className="text-2xl sm:text-3xl md:text-4xl text-white mb-3 sm:mb-4">
             Ready to find your helper?
           </h2>
-          <p className="text-blue-50 mb-8 text-base">
+          <p className="text-blue-50 mb-6 sm:mb-8 text-sm sm:text-base">
             Join LocalHelp today — free to use, free to list your skills.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-3">

@@ -1,9 +1,15 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { Image as ImageIcon, X, Megaphone, HelpCircle, Tag, Loader2 } from "lucide-react";
 import { useAuth } from "../context/AuthContext.jsx";
 import { usePosts } from "../context/PostsContext.jsx";
 
-const POSTABLE_CATEGORIES = ["Announcement", "Question", "Sale"];
+const POSTABLE_CATEGORIES = [
+  { value: "Announcement", icon: Megaphone, color: "text-blue-600 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800" },
+  { value: "Question", icon: HelpCircle, color: "text-purple-600 bg-purple-50 dark:bg-purple-900/30 border-purple-200 dark:border-purple-800" },
+  { value: "Sale", icon: Tag, color: "text-green-600 bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800" },
+];
+
 const MAX_IMAGES = 5;
 const MAX_TOTAL_MB = 5;
 
@@ -21,7 +27,7 @@ export default function PostComposer({ onPosted }) {
 
   if (!user) {
     return (
-      <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 shadow-sm mb-5 text-center">
+      <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-5 shadow-sm mb-5 text-center">
         <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
           Log in to share announcements, questions, or post something for sale.
         </p>
@@ -45,6 +51,7 @@ export default function PostComposer({ onPosted }) {
 
   const totalSizeBytes = images.reduce((sum, img) => sum + img.sizeBytes, 0);
   const totalSizeMB = totalSizeBytes / (1024 * 1024);
+  const activeCategory = POSTABLE_CATEGORIES.find((c) => c.value === category) ?? POSTABLE_CATEGORIES[0];
 
   const resetForm = () => {
     setContent("");
@@ -133,24 +140,26 @@ export default function PostComposer({ onPosted }) {
           <img
             src={user?.avatar || "https://i.pravatar.cc/150?img=68"}
             alt="You"
-            className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+            className="w-11 h-11 rounded-full object-cover flex-shrink-0 ring-2 ring-white dark:ring-gray-900"
           />
           <button
             onClick={() => setModalOpen(true)}
-            className="flex-1 text-left text-sm text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-full px-4 py-2.5 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
+            className="flex-1 text-left text-sm text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-full px-4 py-3 hover:bg-gray-200 dark:hover:bg-gray-700 hover:ring-2 hover:ring-blue-200 dark:hover:ring-blue-900/50 transition-all"
           >
-            Got an announcement, question, or something to sell?
+            What's on your mind, {user?.name?.split(" ")[0] || "there"}?
           </button>
         </div>
-        <div className="flex items-center justify-center mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+
+        <div className="flex items-center mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
           <button
             onClick={() => {
               setModalOpen(true);
               setTimeout(() => fileInputRef.current?.click(), 100);
             }}
-            className="flex items-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 px-4 py-1.5 rounded-lg transition-all"
+            className="flex-1 flex items-center justify-center gap-2 text-sm font-medium text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 py-1.5 rounded-lg transition-all"
           >
-            🖼️ Photo
+            <ImageIcon size={18} className="text-green-500" strokeWidth={2} />
+            Photo
           </button>
         </div>
       </div>
@@ -177,33 +186,43 @@ export default function PostComposer({ onPosted }) {
                 </h3>
                 <button
                   onClick={closeModal}
-                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-xl leading-none"
+                  className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-full p-1 transition-all"
                 >
-                  ×
+                  <X size={20} />
                 </button>
               </div>
 
               <div className="px-5 py-4 overflow-y-auto flex-1">
-                <div className="flex items-center gap-3 mb-3">
+                <div className="flex items-center gap-3 mb-4">
                   <img
                     src={user?.avatar || "https://i.pravatar.cc/150?img=68"}
                     alt="You"
                     className="w-10 h-10 rounded-full object-cover"
                   />
-                  <div>
-                    <p className="text-sm font-semibold text-gray-900 dark:text-white">
-                      {user?.name || "Guest"}
-                    </p>
-                    <select
-                      value={category}
-                      onChange={(e) => setCategory(e.target.value)}
-                      className="text-xs px-2 py-1 rounded-lg border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-600 dark:text-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                    >
-                      {POSTABLE_CATEGORIES.map((cat) => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                  </div>
+                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                    {user?.name || "Guest"}
+                  </p>
+                </div>
+
+                <div className="flex gap-2 mb-4">
+                  {POSTABLE_CATEGORIES.map((cat) => {
+                    const Icon = cat.icon;
+                    const active = category === cat.value;
+                    return (
+                      <button
+                        key={cat.value}
+                        onClick={() => setCategory(cat.value)}
+                        className={`flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${
+                          active
+                            ? cat.color
+                            : "text-gray-500 dark:text-gray-400 bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                        }`}
+                      >
+                        <Icon size={14} strokeWidth={2.25} />
+                        {cat.value}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 <textarea
@@ -222,9 +241,9 @@ export default function PostComposer({ onPosted }) {
                         <img src={img.dataUrl} alt={`Upload ${idx + 1}`} className="w-full h-full object-cover" />
                         <button
                           onClick={() => removeImage(idx)}
-                          className="absolute top-1 right-1 w-6 h-6 bg-black/60 hover:bg-black/80 rounded-full flex items-center justify-center text-white text-sm transition-all"
+                          className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 hover:bg-black/80 rounded-full flex items-center justify-center text-white transition-all"
                         >
-                          ×
+                          <X size={14} strokeWidth={2.5} />
                         </button>
                       </div>
                     ))}
@@ -238,8 +257,8 @@ export default function PostComposer({ onPosted }) {
                 )}
 
                 {error && (
-                  <p className="text-xs text-red-500 mt-2 flex items-center gap-1">
-                    <span>●</span> {error}
+                  <p className="text-xs text-red-500 mt-2 flex items-center gap-1.5">
+                    <span className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" /> {error}
                   </p>
                 )}
 
@@ -257,7 +276,8 @@ export default function PostComposer({ onPosted }) {
                     disabled={images.length >= MAX_IMAGES}
                     className="flex items-center gap-2 text-sm font-medium text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-40 disabled:cursor-not-allowed px-3 py-2 rounded-xl transition-all border border-gray-200 dark:border-gray-700"
                   >
-                    🖼️ Add Photos {images.length > 0 && `(${images.length}/${MAX_IMAGES})`}
+                    <ImageIcon size={16} className="text-green-500" strokeWidth={2} />
+                    Add Photos {images.length > 0 && `(${images.length}/${MAX_IMAGES})`}
                   </button>
                 </div>
               </div>
@@ -266,8 +286,9 @@ export default function PostComposer({ onPosted }) {
                 <button
                   onClick={handleSubmit}
                   disabled={submitting || !content.trim()}
-                  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 text-white font-semibold py-2.5 rounded-xl transition-all active:scale-95"
+                  className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 text-white font-semibold py-2.5 rounded-xl transition-all active:scale-95"
                 >
+                  {submitting && <Loader2 size={16} className="animate-spin" />}
                   {submitting ? "Posting..." : "Post"}
                 </button>
               </div>
