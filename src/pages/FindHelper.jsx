@@ -1,12 +1,13 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
+import MarkerClusterGroup from "react-leaflet-cluster";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { CATEGORIES, getTier } from "../data/MockData";
 import { useHelpers } from "../context/HelperContext.jsx";
-import MarkerClusterGroup from "react-leaflet-cluster";
+import { useAuth } from "../context/AuthContext.jsx";
+import { useNavigate, useLocation } from "react-router-dom";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -88,17 +89,24 @@ const SORT_OPTIONS = [
 ];
 
 const TIER_BADGE_STYLE = {
-  Bronze: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
+  Bronze: "bg-orange-100 text-orange-900 dark:bg-orange-950/50 dark:text-orange-300",
   Silver: "bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300",
   Gold: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/40 dark:text-yellow-300",
+  Platinum: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
 };
 
 const TIER_ACCENT = {
-  Bronze: "border-l-amber-400",
-  Silver: "border-l-gray-400",
-  Gold: "border-l-yellow-400",
-  Platinum: "border-l-indigo-400",
-  Diamond: "border-l-cyan-400",
+  Bronze: "bg-[#8B5A2B]",
+  Silver: "bg-gray-400",
+  Gold: "bg-[#F0C420]",
+  Platinum: "bg-emerald-500",
+};
+const TIER_BORDER_COLOR = {
+  Bronze: "#8B5A2B",
+  Silver: "#9CA3AF",
+  Gold: "#F0C420",
+  Platinum: "#10B981",
+  Diamond: "transparent", // Diamond keeps its own special gradient border below
 };
 
 function getDistance(lat1, lng1, lat2, lng2) {
@@ -118,7 +126,7 @@ function MapFlyController({ selectedHelper, userPos }) {
 
   useEffect(() => {
     if (selectedHelper) {
-      map.flyTo([selectedHelper.lat, selectedHelper.lng], 17, { duration: 1.1 });
+      map.flyTo([selectedHelper.lat, selectedHelper.lng], 16, { duration: 1.1 });
     } else if (userPos) {
       map.flyTo([userPos.lat, userPos.lng], 12, { duration: 1.1 });
     }
@@ -128,16 +136,9 @@ function MapFlyController({ selectedHelper, userPos }) {
 }
 
 function TierBadgeOrFrame({ tier }) {
-  if (tier.label === "Platinum") {
-    return (
-      <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300">
-        ✦ Platinum
-      </span>
-    );
-  }
   if (tier.label === "Diamond") {
     return (
-      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-cyan-100 dark:bg-cyan-900/40 text-cyan-700 dark:text-cyan-300">
+      <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-gradient-to-r from-orange-500 via-pink-500 to-blue-600 text-white shadow-sm shadow-blue-200 dark:shadow-none">
         ◆ Diamond
       </span>
     );
@@ -149,7 +150,7 @@ function TierBadgeOrFrame({ tier }) {
   );
 }
 
-function HelperCard({ helper, isSelected, onSelect, onView, userPos }) {
+function HelperCard({ helper, isSelected, onSelect, onView, userPos, avatarSrc }) {
   const tier = getTier(helper.jobsDone);
   const dist = userPos
     ? getDistance(userPos.lat, userPos.lng, helper.lat, helper.lng).toFixed(1)
@@ -160,14 +161,34 @@ function HelperCard({ helper, isSelected, onSelect, onView, userPos }) {
     <motion.div
       whileHover={{ y: -2 }}
       onClick={onSelect}
-      className={`bg-white dark:bg-gray-900 border-l-4 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 cursor-pointer transition-all hover:shadow-md ${TIER_ACCENT[tier.label]
-        } ${isSelected ? "ring-1 ring-blue-300 dark:ring-blue-700 shadow-md" : ""
+      className={`relative bg-white dark:bg-gray-900 rounded-2xl p-4 pl-5 cursor-pointer transition-all hover:shadow-lg overflow-hidden border ${isSelected ? "ring-2 ring-blue-400 dark:ring-blue-600 shadow-lg" : ""
         }`}
+      style={{ borderColor: TIER_BORDER_COLOR[tier.label] }}
     >
+      {tier.label === "Diamond" ? (
+        <div
+          className="absolute left-0 top-0 bottom-0 w-1.5"
+          style={{ background: "linear-gradient(180deg, #f97316, #ec4899, #3b82f6)" }}
+        />
+      ) : (
+        <div className={`absolute left-0 top-0 bottom-0 w-1.5 ${TIER_ACCENT[tier.label]}`} />
+      )}
+      {tier.label === "Diamond" && (
+        <div
+          className="absolute inset-0 rounded-2xl pointer-events-none"
+          style={{
+            padding: "1px",
+            background: "linear-gradient(120deg, #f97316, #ec4899, #3b82f6)",
+            WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+            WebkitMaskComposite: "xor",
+            maskComposite: "exclude",
+          }}
+        />
+      )}
       <div className="flex items-center gap-4">
         <div className="relative flex-shrink-0">
           <img
-            src={helper.avatar}
+            src={avatarSrc}
             alt={helper.name}
             className="w-14 h-14 rounded-full object-cover"
           />
@@ -179,7 +200,7 @@ function HelperCard({ helper, isSelected, onSelect, onView, userPos }) {
 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <span className="font-bold text-gray-900 dark:text-white">
+            <span className="font-semibold text-gray-900 dark:text-white">
               {helper.name}
             </span>
             {helper.verified && (
@@ -199,7 +220,7 @@ function HelperCard({ helper, isSelected, onSelect, onView, userPos }) {
           </p>
 
           <div className="flex items-center gap-3 mt-1.5 flex-wrap">
-            <span className="flex items-center gap-1 text-sm text-yellow-500 font-semibold">
+            <span className="flex items-center gap-1 text-sm text-amber-500 font-semibold">
               ★ {helper.rating}
               <span className="text-gray-400 font-normal text-xs">
                 ({helper.reviews})
@@ -235,7 +256,7 @@ function HelperCard({ helper, isSelected, onSelect, onView, userPos }) {
 
         <div className="flex flex-col items-end gap-2 flex-shrink-0">
           <div className="text-right">
-            <span className="font-bold text-gray-900 dark:text-white">
+            <span className="font-semibold text-gray-900 dark:text-white">
               ₱{helper.rate.toLocaleString()}
             </span>
             <span className="text-xs text-gray-400 block">
@@ -247,7 +268,7 @@ function HelperCard({ helper, isSelected, onSelect, onView, userPos }) {
               e.stopPropagation();
               onView();
             }}
-            className="text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white px-4 py-1.5 rounded-xl transition-all active:scale-95"
+            className="text-sm font-semibold bg-gray-900 hover:bg-black dark:bg-white dark:hover:bg-gray-100 dark:text-gray-900 text-white px-4 py-1.5 rounded-xl transition-all active:scale-95"
           >
             View
           </button>
@@ -259,8 +280,10 @@ function HelperCard({ helper, isSelected, onSelect, onView, userPos }) {
 
 export default function FindHelper() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [q, setQ] = useState("");
-  const { helpers } = useHelpers();
+  const { helpers, getHelperAvatar } = useHelpers();
+  const { user } = useAuth();
   const [category, setCategory] = useState("All");
   const [sort, setSort] = useState("rating");
   const [availableOnly, setAvailableOnly] = useState(false);
@@ -343,12 +366,13 @@ export default function FindHelper() {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
-      <div className="w-full mx-auto px-4 py-4">
+      <div className="w-full mx-auto px-4 py-5">
 
+        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
           <div>
-            <h1 className="text-2xl font-extrabold text-gray-900 dark:text-white">
-              Find a Helper
+            <h1 className="text-2xl text-gray-900 dark:text-white">
+              Find a helper
             </h1>
             <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
               {filtered.length} helper{filtered.length !== 1 ? "s" : ""} found
@@ -357,112 +381,182 @@ export default function FindHelper() {
           </div>
 
           <div className="flex items-center gap-2 flex-wrap">
-            <button
-              onClick={handleGPS}
-              disabled={gpsLoading}
-              className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:border-blue-400 transition-all disabled:opacity-60"
-            >
-              {gpsLoading ? (
-                <svg className="animate-spin h-4 w-4 text-blue-500" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
-                </svg>
-              ) : (
-                <span>📍</span>
+            <div className="relative">
+              {userPos && (
+                <motion.span
+                  className="absolute inset-0 rounded-xl pointer-events-none"
+                  style={{ boxShadow: "0 0 0 0 rgba(236, 72, 153, 0.6)" }}
+                  animate={{
+                    boxShadow: [
+                      "0 0 0 0 rgba(236, 72, 153, 0.6)",
+                      "0 0 0 8px rgba(236, 72, 153, 0)",
+                    ],
+                  }}
+                  transition={{ duration: 1.6, repeat: Infinity, ease: "easeOut" }}
+                />
               )}
-              {userPos ? "GPS Active" : "Use My Location"}
-            </button>
+              <motion.button
+                onClick={handleGPS}
+                disabled={gpsLoading}
+                whileTap={{ scale: 0.97 }}
+                className={`relative flex items-center gap-2 text-sm font-medium px-4 py-2.5 rounded-xl transition-all disabled:opacity-60 overflow-hidden ${userPos
+                  ? "text-white"
+                  : "bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 hover:border-gray-300 dark:hover:border-gray-600"
+                  }`}
+                style={
+                  userPos
+                    ? { background: "linear-gradient(120deg, #f97316, #ec4899, #3b82f6)" }
+                    : undefined
+                }
+              >
+                {gpsLoading ? (
+                  <svg className="animate-spin h-4 w-4 relative z-10" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                ) : (
+                  <span className="text-base leading-none relative z-10">{userPos ? "◉" : "○"}</span>
+                )}
+                <span className="relative z-10">{userPos ? "Location active" : "Use my location"}</span>
+              </motion.button>
+            </div>
+
             <button
               onClick={() => setShowMap((v) => !v)}
-              className="flex items-center gap-1.5 text-sm font-medium px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:border-blue-400 transition-all"
+              className="flex items-center justify-center w-10 h-10 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 text-gray-500 dark:text-gray-400 hover:border-gray-300 dark:hover:border-gray-600 hover:text-gray-700 dark:hover:text-gray-200 transition-all"
+              title={showMap ? "Hide map" : "Show map"}
             >
-              {showMap ? "🗺️ Hide Map" : "🗺️ Show Map"}
+              <span className="text-base leading-none">{showMap ? "▤" : "▦"}</span>
             </button>
           </div>
         </div>
 
         {gpsError && (
-          <p className="text-xs text-red-500 mb-3 flex items-center gap-1">
-            <span>⚠️</span> {gpsError}
+          <p className="text-xs text-red-500 mb-3 flex items-center gap-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-red-500" /> {gpsError}
           </p>
         )}
 
-        {userPos && (
-          <div className="mb-4 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-xl px-4 py-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-gray-600 dark:text-gray-300 flex items-center gap-1">
-                <span className="text-green-500">✓</span> Search radius
-              </span>
-              <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
-                {radius} km
-              </span>
-            </div>
-            <input
-              type="range"
-              min="1"
-              max="50"
-              step="1"
-              value={radius}
-              onChange={(e) => setRadius(Number(e.target.value))}
-              className="w-full h-1.5 rounded-full appearance-none cursor-pointer bg-gray-200 dark:bg-gray-700 accent-blue-600"
-            />
-            <div className="flex justify-between text-[10px] text-gray-400 mt-1">
-              <span>1 km</span>
-              <span>50 km</span>
-            </div>
-          </div>
-        )}
+        <AnimatePresence>
+          {userPos && (
+            <motion.div
+              initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+              animate={{ opacity: 1, height: "auto", marginBottom: 20 }}
+              exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+              transition={{ duration: 0.4, ease: "easeOut" }}
+              className="overflow-hidden"
+            >
+              <div
+                className="relative rounded-2xl px-5 py-4 overflow-hidden"
+                style={{
+                  background: "linear-gradient(120deg, rgba(249,115,22,0.06), rgba(236,72,153,0.06), rgba(59,130,246,0.06))",
+                }}
+              >
+                <div
+                  className="absolute inset-0 rounded-2xl pointer-events-none"
+                  style={{
+                    padding: "1px",
+                    background: "linear-gradient(120deg, #f97316, #ec4899, #3b82f6)",
+                    WebkitMask: "linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)",
+                    WebkitMaskComposite: "xor",
+                    maskComposite: "exclude",
+                    opacity: 0.4,
+                  }}
+                />
+                <div className="relative">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-medium text-gray-600 dark:text-gray-300 uppercase tracking-wide flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 rounded-full bg-gradient-to-r from-orange-500 to-blue-500 animate-pulse" />
+                      Search radius
+                    </span>
+                    <motion.span
+                      key={radius}
+                      initial={{ scale: 1.3, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="text-base font-semibold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent"
+                    >
+                      {radius} km
+                    </motion.span>
+                  </div>
+                  <div className="relative flex items-center">
+                    <div
+                      className="absolute left-0 h-1.5 rounded-full pointer-events-none"
+                      style={{
+                        width: `${((radius - 1) / 49) * 100}%`,
+                        background: "linear-gradient(90deg, #f97316, #ec4899, #3b82f6)",
+                      }}
+                    />
+                    <input
+                      type="range"
+                      min="1"
+                      max="50"
+                      step="1"
+                      value={radius}
+                      onChange={(e) => setRadius(Number(e.target.value))}
+                      className="relative w-full cursor-pointer"
+                    />
+                  </div>
+                  <div className="flex justify-between text-[10px] text-gray-400 mt-1.5">
+                    <span>1 km</span>
+                    <span>50 km</span>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="flex flex-col lg:flex-row gap-6">
 
           <div className="flex-1 min-w-0">
 
+            {/* Search */}
             <div className="relative mb-4">
-              <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm">🔍</span>
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 text-sm">⌕</span>
               <input
                 type="text"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Search helpers, categories, or tags..."
-                className="w-full pl-10 pr-4 py-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+                placeholder="Search helpers, categories, or skills..."
+                className="w-full pl-10 pr-10 py-3 rounded-2xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-sm text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400/50 focus:border-blue-400 transition-all"
               />
               {q && (
                 <button
                   onClick={() => setQ("")}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-lg"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-200 text-lg leading-none"
                 >
                   ×
                 </button>
               )}
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 mb-4">
-              <div className="flex gap-1.5 flex-wrap">
-                {CATEGORIES.map((cat) => (
-                  <button
-                    key={cat}
-                    onClick={() => setCategory(cat)}
-                    className={`text-xs font-semibold px-3 py-1.5 rounded-full border transition-all ${category === cat
-                        ? "bg-blue-600 text-white border-blue-600"
-                        : "bg-white dark:bg-gray-800 text-gray-600 dark:text-gray-300 border-gray-200 dark:border-gray-700 hover:border-blue-400"
-                      }`}
-                  >
-                    {cat}
-                  </button>
-                ))}
-              </div>
+            {/* Category pills */}
+            <div className="flex gap-1.5 flex-wrap mb-4">
+              {CATEGORIES.map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setCategory(cat)}
+                  className={`text-xs font-medium px-3.5 py-1.5 rounded-full transition-all ${category === cat
+                    ? "bg-gray-900 dark:bg-white text-white dark:text-gray-900"
+                    : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-300 border border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600"
+                    }`}
+                >
+                  {cat}
+                </button>
+              ))}
             </div>
 
-            <div className="flex items-center justify-between mb-5 flex-wrap gap-2">
-              <label className="flex items-center gap-2 cursor-pointer">
+            {/* Filter row */}
+            <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
+              <label className="flex items-center gap-2.5 cursor-pointer select-none">
                 <div
                   onClick={() => setAvailableOnly((v) => !v)}
-                  className={`w-10 h-5 rounded-full transition-all relative ${availableOnly ? "bg-blue-600" : "bg-gray-200 dark:bg-gray-700"
+                  className={`w-9 h-5 rounded-full transition-all relative ${availableOnly ? "bg-gray-900 dark:bg-white" : "bg-gray-200 dark:bg-gray-700"
                     }`}
                 >
                   <div
-                    className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-all ${availableOnly ? "left-5" : "left-0.5"
-                      }`}
+                    className="absolute top-0.5 w-4 h-4 rounded-full shadow transition-all bg-white"
+                    style={{ left: availableOnly ? "18px" : "2px" }}
                   />
                 </div>
                 <span className="text-sm text-gray-600 dark:text-gray-300">
@@ -473,7 +567,7 @@ export default function FindHelper() {
               <select
                 value={sort}
                 onChange={(e) => setSort(e.target.value)}
-                className="text-sm px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                className="text-sm px-3.5 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 text-gray-700 dark:text-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-400/50"
               >
                 {SORT_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -483,16 +577,17 @@ export default function FindHelper() {
               </select>
             </div>
 
+            {/* Results */}
             <div className="space-y-3">
               <AnimatePresence>
                 {filtered.length === 0 ? (
                   <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
-                    className="text-center py-12 text-gray-400"
+                    className="text-center py-16 text-gray-400 bg-white dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-800"
                   >
-                    <div className="text-5xl mb-3">🔍</div>
-                    <p className="font-semibold text-gray-600 dark:text-gray-300">No helpers found</p>
+                    <div className="text-4xl mb-3 opacity-40">⌕</div>
+                    <p className="font-medium text-gray-600 dark:text-gray-300">No helpers found</p>
                     <p className="text-sm mt-1">Try a different search or category.</p>
 
                     {relatedSuggestions.length > 0 && (
@@ -534,11 +629,16 @@ export default function FindHelper() {
                           helper={helper}
                           isSelected={isSelected}
                           userPos={userPos}
+                          avatarSrc={getHelperAvatar(helper, user)}
                           onSelect={() => {
                             setSelectedHelper(isSelected ? null : helper);
                             if (!showMap) setShowMap(true);
                           }}
-                          onView={() => navigate(`/helper/${helper.id}`)}
+                          onView={() =>
+  navigate(`/helper/${helper.id}`, {
+    state: { backgroundLocation: location },
+  })
+}
                         />
                       </motion.div>
                     );
@@ -548,6 +648,7 @@ export default function FindHelper() {
             </div>
           </div>
 
+          {/* Map */}
           <AnimatePresence>
             {showMap && (
               <motion.div
@@ -558,16 +659,16 @@ export default function FindHelper() {
                 className="w-full lg:w-[480px] xl:w-[560px] flex-shrink-0"
               >
                 <div className="sticky top-4 rounded-2xl overflow-hidden border border-gray-200 dark:border-gray-700 shadow-sm">
-                  <div className="bg-white dark:bg-gray-900 px-4 py-3 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
+                  <div className="bg-white dark:bg-gray-900 px-5 py-3.5 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-semibold text-gray-700 dark:text-gray-200">
-                        🗺️ Helper Map
+                      <p className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                        Helper map
                       </p>
                       <p className="text-xs text-gray-400">
                         {selectedHelper ? `Focused on ${selectedHelper.name}` : "Click a card to zoom in"}
                       </p>
                     </div>
-                    <span className="text-xs font-semibold bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 px-2.5 py-1 rounded-full">
+                    <span className="text-xs font-semibold bg-gradient-to-r from-orange-50 to-blue-50 dark:from-orange-900/30 dark:to-blue-900/30 text-blue-700 dark:text-blue-300 px-2.5 py-1 rounded-full">
                       {filtered.length} pin{filtered.length !== 1 ? "s" : ""}
                     </span>
                   </div>
@@ -595,7 +696,7 @@ export default function FindHelper() {
                     )}
                     <MarkerClusterGroup
                       chunkedLoading
-                      maxClusterRadius={50}
+                      maxClusterRadius={35}
                       spiderfyOnMaxZoom={true}
                       showCoverageOnHover={false}
                       disableClusteringAtZoom={17}
@@ -603,16 +704,16 @@ export default function FindHelper() {
                         const count = cluster.getChildCount();
                         return L.divIcon({
                           html: `
-        <div style="
-          background: #2563eb;
-          width: 40px; height: 40px;
-          border-radius: 50%;
-          border: 3px solid white;
-          box-shadow: 0 3px 8px rgba(0,0,0,0.3);
-          display:flex; align-items:center; justify-content:center;
-          color: white; font-weight: 700; font-size: 14px;
-        ">${count}</div>
-      `,
+                            <div style="
+                              background: linear-gradient(135deg, #f97316, #3b82f6);
+                              width: 40px; height: 40px;
+                              border-radius: 50%;
+                              border: 3px solid white;
+                              box-shadow: 0 3px 8px rgba(0,0,0,0.3);
+                              display:flex; align-items:center; justify-content:center;
+                              color: white; font-weight: 700; font-size: 14px;
+                            ">${count}</div>
+                          `,
                           className: "custom-cluster-icon",
                           iconSize: [40, 40],
                         });

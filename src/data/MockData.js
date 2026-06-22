@@ -290,3 +290,14 @@ export const mockUser = {
   postedCards: [1],
   darkMode: false,
 };
+
+export const FLAGGED_KEYWORDS = [
+  "weapon", "firearm", "drug", "narcotic", "explicit", "escort",
+  "gambling", "counterfeit", "stolen", "hack", "exploit",
+];
+
+export const containsFlaggedContent = (text) => {
+  if (!text) return false;
+  const lower = text.toLowerCase();
+  return FLAGGED_KEYWORDS.some((word) => lower.includes(word));
+};

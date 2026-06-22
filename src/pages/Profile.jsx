@@ -4,10 +4,11 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useHelpers } from "../context/HelperContext.jsx";
 import AvatarPickerModal from "../components/AvatarPickerModal.jsx";
+import RequireLogin from "../components/RequireLogin.jsx";
 
 export default function Profile() {
   const { user, updateUser } = useAuth();
-  const { helpers, deleteHelper } = useHelpers();
+  const { helpers, deleteHelper, getHelperAvatar, requestVerification } = useHelpers();
   const navigate = useNavigate();
 
   const [editingField, setEditingField] = useState(null);
@@ -15,21 +16,15 @@ export default function Profile() {
   const [toast, setToast] = useState("");
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [avatarModalOpen, setAvatarModalOpen] = useState(false);
+  const [showCriteria, setShowCriteria] = useState(false);
 
   if (!user) {
     return (
-      <div className="min-h-screen flex flex-col items-center justify-center text-center px-4">
-        <div className="text-5xl mb-3">🔒</div>
-        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
-          Please log in to view your profile
-        </h2>
-        <button
-          onClick={() => navigate("/login")}
-          className="mt-5 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl transition-all active:scale-95"
-        >
-          Go to Login
-        </button>
-      </div>
+      <RequireLogin
+        title="Please log in to view your profile"
+        description="Manage your account, posted listings, and settings here."
+        icon="👤"
+      />
     );
   }
 
@@ -68,7 +63,18 @@ export default function Profile() {
     showToast("Help card deleted.");
   };
 
-  const myPostedHelpers = helpers.filter((h) => h.name === user.name);
+  const myPostedHelpers = helpers.filter((h) => h.userId === user.id);
+  const isAccountVerified = myPostedHelpers.some((h) => h.verified);
+  const isReviewing = myPostedHelpers.some((h) => h.verificationStatus === "reviewing");
+
+  const handleRequestVerification = () => {
+    if (myPostedHelpers.length === 0) {
+      showToast("Post a help card before requesting verification.");
+      return;
+    }
+    requestVerification(user.id);
+    showToast("Verification request submitted!");
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
@@ -78,7 +84,6 @@ export default function Profile() {
           My Profile
         </h1>
 
-        {/* Profile card */}
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -122,11 +127,16 @@ export default function Profile() {
                   <button onClick={cancelEdit} className="text-gray-400 text-sm">✕</button>
                 </div>
               ) : (
-                <div className="flex items-center gap-2 group">
+                <div className="flex items-center gap-2 flex-wrap">
                   <h2 className="text-xl font-bold text-gray-900 dark:text-white">{user.name}</h2>
+                  {isAccountVerified && (
+                    <span className="text-blue-500 text-sm font-medium flex items-center gap-1">
+                      ✓ Verified
+                    </span>
+                  )}
                   <button
                     onClick={() => startEdit("name", user.name)}
-                    className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 hover:text-blue-500 transition-all"
+                    className="text-xs text-blue-500 hover:text-blue-600 transition-all"
                   >
                     ✎ edit
                   </button>
@@ -153,11 +163,11 @@ export default function Profile() {
                 <button onClick={cancelEdit} className="text-gray-400 text-sm px-2">✕</button>
               </div>
             ) : (
-              <div className="flex items-center gap-2 group">
+              <div className="flex items-center gap-2">
                 <span className="text-sm text-gray-700 dark:text-gray-300">📍 {user.location}</span>
                 <button
                   onClick={() => startEdit("location", user.location)}
-                  className="text-xs text-gray-400 opacity-0 group-hover:opacity-100 hover:text-blue-500 transition-all"
+                  className="text-xs text-blue-500 hover:text-blue-600 transition-all"
                 >
                   ✎ edit
                 </button>
@@ -166,7 +176,70 @@ export default function Profile() {
           </div>
         </motion.div>
 
-        {/* Posted help cards */}
+        {/* Verification section */}
+        {!isAccountVerified && (
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.35, delay: 0.05 }}
+            className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-6 shadow-sm mt-5"
+          >
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold text-gray-900 dark:text-white flex items-center gap-1.5">
+                  🛡️ Account Verification
+                </h3>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Verified accounts get a trust badge shown on all their listings.
+                </p>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowCriteria((v) => !v)}
+              className="text-xs text-blue-500 hover:underline mt-2"
+            >
+              {showCriteria ? "Hide" : "View"} verification requirements
+            </button>
+
+            <AnimatePresence>
+              {showCriteria && (
+                <motion.ul
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  className="overflow-hidden text-xs text-gray-500 dark:text-gray-400 mt-2 space-y-1 pl-1"
+                >
+                  <li>• Complete profile with a full bio</li>
+                  <li>• No unresolved reports against your account</li>
+                  <li>• At least 20 completed services</li>
+                  <li>• 4.0+ average rating</li>
+                  <li>• No prohibited or illegal content in listings</li>
+                </motion.ul>
+              )}
+            </AnimatePresence>
+
+            <div className="mt-4">
+              {isReviewing ? (
+                <p className="text-sm text-indigo-600 dark:text-indigo-300 flex items-center gap-2">
+                  <svg className="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8z" />
+                  </svg>
+                  Moderators are reviewing your account...
+                </p>
+              ) : (
+                <button
+                  onClick={handleRequestVerification}
+                  className="text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white px-5 py-2.5 rounded-xl transition-all active:scale-95"
+                >
+                  Request Verification
+                </button>
+              )}
+            </div>
+          </motion.div>
+        )}
+
         <motion.div
           initial={{ opacity: 0, y: 16 }}
           animate={{ opacity: 1, y: 0 }}
@@ -211,7 +284,7 @@ export default function Profile() {
                     className="flex items-center gap-3 p-3 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
                   >
                     <img
-                      src={h.avatar}
+                      src={getHelperAvatar(h, user)}
                       alt={h.name}
                       onClick={() => navigate(`/helper/${h.id}`)}
                       className="w-10 h-10 rounded-full object-cover cursor-pointer flex-shrink-0"
@@ -220,7 +293,10 @@ export default function Profile() {
                       onClick={() => navigate(`/helper/${h.id}`)}
                       className="flex-1 min-w-0 cursor-pointer"
                     >
-                      <p className="text-sm font-semibold text-gray-800 dark:text-gray-100">{h.category}</p>
+                      <p className="text-sm font-semibold text-gray-800 dark:text-gray-100 flex items-center gap-1.5">
+                        {h.category}
+                        {h.verified && <span className="text-blue-500 text-xs">✓</span>}
+                      </p>
                       <p className="text-xs text-gray-400 truncate">{h.bio}</p>
                     </div>
                     <span className={`text-xs font-medium flex-shrink-0 ${h.available ? "text-green-500" : "text-gray-400"}`}>
@@ -264,7 +340,6 @@ export default function Profile() {
         </button>
       </div>
 
-      {/* Toast */}
       <AnimatePresence>
         {toast && (
           <motion.div
@@ -278,7 +353,6 @@ export default function Profile() {
         )}
       </AnimatePresence>
 
-      {/* Avatar picker modal */}
       <AnimatePresence>
         {avatarModalOpen && (
           <AvatarPickerModal
@@ -289,7 +363,6 @@ export default function Profile() {
         )}
       </AnimatePresence>
 
-      {/* Delete confirmation modal */}
       <AnimatePresence>
         {deleteTarget && (
           <motion.div

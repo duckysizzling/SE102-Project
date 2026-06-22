@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "../context/AuthContext.jsx";
 import { useTheme } from "../context/ThemeContext.jsx";
+import RequireLogin from "../components/RequireLogin.jsx";
 
 export default function Settings() {
   const { user, updateUser, logout } = useAuth();
@@ -18,22 +19,15 @@ export default function Settings() {
   const [toast, setToast] = useState("");
   const [confirmLogout, setConfirmLogout] = useState(false);
 
-  if (!user) {
-    return (
-      <div className="min-h-screen flex flex-col items-center justify-center text-center px-4">
-        <div className="text-5xl mb-3">🔒</div>
-        <h2 className="text-xl font-bold text-gray-800 dark:text-gray-100">
-          Please log in to access settings
-        </h2>
-        <button
-          onClick={() => navigate("/login")}
-          className="mt-5 text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl transition-all active:scale-95"
-        >
-          Go to Login
-        </button>
-      </div>
-    );
-  }
+if (!user) {
+  return (
+    <RequireLogin
+      title="Please log in to access settings"
+      description="Customize your preferences and manage your account."
+      icon="⚙️"
+    />
+  );
+}
 
   const showToast = (msg) => {
     setToast(msg);

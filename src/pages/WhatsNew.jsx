@@ -1,16 +1,21 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { POST_CATEGORIES, TRENDING_TAGS } from "../data/MockData";
 import { usePosts } from "../context/PostsContext.jsx";
+import { useAuth } from "../context/AuthContext.jsx";
 import PostComposer from "../components/PostComposer.jsx";
 
 export default function WhatsNew() {
-  const { posts, toggleLike, addComment } = usePosts();
+  const { posts, toggleLike, addComment, getPostAvatar } = usePosts();
+  const { user } = useAuth();
+  const navigate = useNavigate();
   const [category, setCategory] = useState("All");
   const [activeTag, setActiveTag] = useState(null);
   const [openComments, setOpenComments] = useState({});
   const [commentDrafts, setCommentDrafts] = useState({});
   const [lightboxImage, setLightboxImage] = useState(null);
+  const [likedIds, setLikedIds] = useState(new Set());
 
   const filtered = posts.filter((p) => {
     const matchCat = category === "All" || p.category === category;
@@ -18,7 +23,15 @@ export default function WhatsNew() {
     return matchCat && matchTag;
   });
 
-  const handleLike = (id, currentlyLiked) => {
+  const isLiked = (id) => likedIds.has(id);
+
+  const handleLikeClick = (id) => {
+    const currentlyLiked = isLiked(id);
+    setLikedIds((prev) => {
+      const next = new Set(prev);
+      currentlyLiked ? next.delete(id) : next.add(id);
+      return next;
+    });
     toggleLike(id, currentlyLiked);
   };
 
@@ -41,19 +54,6 @@ export default function WhatsNew() {
     Announcement: "bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300",
     Question: "bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300",
     Sale: "bg-green-100 text-green-700 dark:bg-green-900/40 dark:text-green-300",
-  };
-
-  // Local "liked" tracking — separate from stored data since likes are simulated per-session
-  const [likedIds, setLikedIds] = useState(new Set());
-  const isLiked = (id) => likedIds.has(id);
-  const handleLikeClick = (id) => {
-    const currentlyLiked = isLiked(id);
-    setLikedIds((prev) => {
-      const next = new Set(prev);
-      currentlyLiked ? next.delete(id) : next.add(id);
-      return next;
-    });
-    handleLike(id, currentlyLiked);
   };
 
   return (
@@ -139,7 +139,7 @@ export default function WhatsNew() {
                       <div className="flex items-start justify-between gap-3">
                         <div className="flex items-center gap-3">
                           <img
-                            src={post.avatar}
+                            src={getPostAvatar(post, user)}
                             alt={post.user}
                             className="w-10 h-10 rounded-full object-cover flex-shrink-0"
                           />
@@ -161,7 +161,6 @@ export default function WhatsNew() {
                         {post.content}
                       </p>
 
-                      {/* Image gallery */}
                       {post.images && post.images.length > 0 && (
                         <div className={`grid gap-1.5 mt-3 rounded-xl overflow-hidden ${
                           post.images.length === 1 ? "grid-cols-1" :
@@ -254,23 +253,31 @@ export default function WhatsNew() {
                               </p>
                             )}
 
-                            <div className="flex gap-2">
-                              <input
-                                type="text"
-                                value={commentDrafts[post.id] || ""}
-                                onChange={(e) => handleCommentChange(post.id, e.target.value)}
-                                onKeyDown={(e) => e.key === "Enter" && handleAddComment(post.id)}
-                                placeholder="Write a comment..."
-                                className="flex-1 text-xs px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
-                              />
-                              <button
-                                onClick={() => handleAddComment(post.id)}
-                                disabled={!commentDrafts[post.id]?.trim()}
-                                className="text-xs font-semibold bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 text-white px-3 py-2 rounded-xl transition-all active:scale-95"
-                              >
-                                Post
-                              </button>
-                            </div>
+                            {user ? (
+                              <div className="flex gap-2">
+                                <input
+                                  type="text"
+                                  value={commentDrafts[post.id] || ""}
+                                  onChange={(e) => handleCommentChange(post.id, e.target.value)}
+                                  onKeyDown={(e) => e.key === "Enter" && handleAddComment(post.id)}
+                                  placeholder="Write a comment..."
+                                  className="flex-1 text-xs px-3 py-2 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all"
+                                />
+                                <button
+                                  onClick={() => handleAddComment(post.id)}
+                                  disabled={!commentDrafts[post.id]?.trim()}
+                                  className="text-xs font-semibold bg-blue-600 hover:bg-blue-700 disabled:bg-gray-200 dark:disabled:bg-gray-700 disabled:text-gray-400 text-white px-3 py-2 rounded-xl transition-all active:scale-95"
+                                >
+                                  Post
+                                </button>
+                              </div>
+                            ) : (
+                              <p className="text-xs text-center text-gray-400 py-1">
+                                <button onClick={() => navigate("/login")} className="text-blue-500 hover:underline font-medium">
+                                  Log in
+                                </button> to leave a comment.
+                              </p>
+                            )}
                           </motion.div>
                         )}
                       </AnimatePresence>
@@ -330,7 +337,6 @@ export default function WhatsNew() {
         </div>
       </div>
 
-      {/* Image lightbox */}
       <AnimatePresence>
         {lightboxImage && (
           <motion.div

@@ -14,10 +14,34 @@ export default function PostComposer({ onPosted }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [content, setContent] = useState("");
   const [category, setCategory] = useState("Announcement");
-  const [images, setImages] = useState([]); // array of { dataUrl, sizeBytes }
+  const [images, setImages] = useState([]);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const fileInputRef = useRef(null);
+
+  if (!user) {
+    return (
+      <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 shadow-sm mb-5 text-center">
+        <p className="text-sm text-gray-500 dark:text-gray-400 mb-3">
+          Log in to share announcements, questions, or post something for sale.
+        </p>
+        <div className="flex justify-center gap-2">
+          <button
+            onClick={() => window.location.assign("/login")}
+            className="text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl transition-all active:scale-95"
+          >
+            Log In
+          </button>
+          <button
+            onClick={() => window.location.assign("/signup")}
+            className="text-sm font-semibold bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-xl hover:bg-gray-50 dark:hover:bg-gray-700 transition-all active:scale-95"
+          >
+            Sign Up
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const totalSizeBytes = images.reduce((sum, img) => sum + img.sizeBytes, 0);
   const totalSizeMB = totalSizeBytes / (1024 * 1024);
@@ -72,7 +96,7 @@ export default function PostComposer({ onPosted }) {
       reader.readAsDataURL(file);
     });
 
-    e.target.value = ""; // allow re-selecting the same file later
+    e.target.value = "";
   };
 
   const removeImage = (index) => {
@@ -90,7 +114,7 @@ export default function PostComposer({ onPosted }) {
 
     addPost({
       user: user?.name || "Guest",
-      avatar: user?.avatar || "https://i.pravatar.cc/150?img=68",
+      userId: user?.id || null,
       category,
       content: content.trim(),
       tags: [],
@@ -104,7 +128,6 @@ export default function PostComposer({ onPosted }) {
 
   return (
     <>
-      {/* Compact trigger bar (Facebook-style) */}
       <div className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-4 shadow-sm mb-5">
         <div className="flex items-center gap-3">
           <img
@@ -116,7 +139,7 @@ export default function PostComposer({ onPosted }) {
             onClick={() => setModalOpen(true)}
             className="flex-1 text-left text-sm text-gray-400 bg-gray-100 dark:bg-gray-800 rounded-full px-4 py-2.5 hover:bg-gray-200 dark:hover:bg-gray-700 transition-all"
           >
-            "Share something with the community..."
+            Got an announcement, question, or something to sell?
           </button>
         </div>
         <div className="flex items-center justify-center mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
@@ -132,7 +155,6 @@ export default function PostComposer({ onPosted }) {
         </div>
       </div>
 
-      {/* Expanded composer modal */}
       <AnimatePresence>
         {modalOpen && (
           <motion.div
@@ -149,7 +171,6 @@ export default function PostComposer({ onPosted }) {
               onClick={(e) => e.stopPropagation()}
               className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-lg shadow-xl overflow-hidden max-h-[85vh] flex flex-col"
             >
-              {/* Header */}
               <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 flex items-center justify-between">
                 <h3 className="text-base font-bold text-gray-900 dark:text-white text-center flex-1">
                   Create Post
@@ -162,7 +183,6 @@ export default function PostComposer({ onPosted }) {
                 </button>
               </div>
 
-              {/* Body */}
               <div className="px-5 py-4 overflow-y-auto flex-1">
                 <div className="flex items-center gap-3 mb-3">
                   <img
@@ -195,7 +215,6 @@ export default function PostComposer({ onPosted }) {
                   className="w-full text-sm px-1 py-1 bg-transparent text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none resize-none"
                 />
 
-                {/* Image previews */}
                 {images.length > 0 && (
                   <div className="grid grid-cols-3 gap-2 mt-3">
                     {images.map((img, idx) => (
@@ -212,7 +231,6 @@ export default function PostComposer({ onPosted }) {
                   </div>
                 )}
 
-                {/* Storage indicator */}
                 {images.length > 0 && (
                   <p className="text-[10px] text-gray-400 mt-2">
                     {totalSizeMB.toFixed(1)}MB / {MAX_TOTAL_MB}MB used · {images.length}/{MAX_IMAGES} photos
@@ -225,7 +243,6 @@ export default function PostComposer({ onPosted }) {
                   </p>
                 )}
 
-                {/* Add photo button */}
                 <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
                   <input
                     ref={fileInputRef}
@@ -245,7 +262,6 @@ export default function PostComposer({ onPosted }) {
                 </div>
               </div>
 
-              {/* Footer */}
               <div className="px-5 py-4 border-t border-gray-100 dark:border-gray-800">
                 <button
                   onClick={handleSubmit}

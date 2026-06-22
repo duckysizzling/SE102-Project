@@ -71,7 +71,9 @@ export default function Landing() {
 
       {/* NAV */}
       <nav className="flex items-center justify-between px-6 md:px-12 py-4 border-b border-gray-100 dark:border-gray-800">
-        <span className="text-xl font-bold text-blue-600">LocalHelp</span>
+        <span className="text-xl font-bold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+          LocalHelp
+        </span>
         <div className="flex items-center gap-3">
           <button
             onClick={() => navigate("/login")}
@@ -90,16 +92,16 @@ export default function Landing() {
 
       {/* HERO */}
       <section className="relative flex flex-col items-center text-center px-6 pt-20 pb-24 md:pt-28 md:pb-32 overflow-hidden">
-        {/* Background blobs */}
-        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[700px] h-[400px] bg-blue-100 dark:bg-blue-950 rounded-full blur-3xl opacity-40 pointer-events-none" />
+        {/* Signature gradient glow — the one bold moment */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[450px] bg-gradient-to-br from-orange-300 via-pink-200 to-blue-300 dark:from-orange-900/40 dark:via-pink-900/20 dark:to-blue-900/40 rounded-full blur-[100px] opacity-50 pointer-events-none" />
 
         <motion.div
           initial="hidden"
           animate="show"
           variants={fadeUp}
-          className="relative z-10 inline-flex items-center gap-2 bg-blue-50 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 text-sm font-medium px-4 py-1.5 rounded-full mb-6 border border-blue-100 dark:border-blue-800"
+          className="relative z-10 inline-flex items-center gap-2 bg-gradient-to-r from-orange-50 to-blue-50 dark:from-orange-900/30 dark:to-blue-900/30 text-blue-700 dark:text-blue-300 text-sm font-medium px-4 py-1.5 rounded-full mb-6 border border-blue-100 dark:border-blue-800"
         >
-          <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+          <span className="w-2 h-2 rounded-full bg-gradient-to-r from-orange-500 to-blue-500 animate-pulse" />
           50+ verified helpers in Cavite
         </motion.div>
 
@@ -108,10 +110,12 @@ export default function Landing() {
           initial="hidden"
           animate="show"
           variants={fadeUp}
-          className="relative z-10 text-4xl md:text-6xl font-extrabold leading-tight tracking-tight max-w-3xl"
+          className="relative z-10 text-4xl md:text-6xl font-bold leading-tight tracking-tight max-w-3xl"
         >
           Find trusted local help,{" "}
-          <span className="text-blue-600">right in your area.</span>
+          <span className="bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+            right in your area.
+          </span>
         </motion.h1>
 
         <motion.p
@@ -134,7 +138,7 @@ export default function Landing() {
         >
           <button
             onClick={() => navigate("/signup")}
-            className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-semibold text-base px-8 py-3 rounded-xl shadow-lg shadow-blue-200 dark:shadow-none transition-all active:scale-95"
+            className="w-full sm:w-auto bg-gradient-to-r from-orange-600 to-blue-600 hover:from-orange-700 hover:to-blue-700 text-white font-semibold text-base px-8 py-3 rounded-xl shadow-lg shadow-blue-200 dark:shadow-none transition-all active:scale-95"
           >
             Get Started — it's free
           </button>
@@ -161,7 +165,9 @@ export default function Landing() {
             { value: "Free", label: "To Join" },
           ].map((stat) => (
             <div key={stat.label}>
-              <div className="text-2xl font-extrabold text-blue-600">{stat.value}</div>
+              <div className="text-2xl font-bold bg-gradient-to-r from-orange-600 to-blue-600 bg-clip-text text-transparent">
+                {stat.value}
+              </div>
               <div className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">{stat.label}</div>
             </div>
           ))}
@@ -171,7 +177,7 @@ export default function Landing() {
       {/* CATEGORIES */}
       <section className="px-6 md:px-12 py-16 bg-gray-50 dark:bg-gray-900">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-2xl md:text-3xl font-bold text-center mb-2">
+          <h2 className="text-2xl md:text-3xl text-center mb-2">
             What do you need help with?
           </h2>
           <p className="text-center text-gray-500 dark:text-gray-400 mb-10">
@@ -187,7 +193,7 @@ export default function Landing() {
                 viewport={{ once: true }}
                 variants={fadeUp}
                 onClick={() => navigate("/find")}
-                className="flex flex-col items-center gap-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-5 hover:border-blue-400 hover:shadow-md transition-all active:scale-95 group"
+                className="flex flex-col items-center gap-2 bg-white dark:bg-gray-800 border border-gray-100 dark:border-gray-700 rounded-2xl p-5 hover:border-transparent hover:shadow-lg hover:shadow-blue-100 dark:hover:shadow-none hover:-translate-y-0.5 transition-all active:scale-95 group"
               >
                 <span className="text-3xl">{cat.icon}</span>
                 <span className="text-sm font-semibold text-gray-700 dark:text-gray-200 group-hover:text-blue-600 transition-colors">
@@ -202,7 +208,7 @@ export default function Landing() {
       {/* HOW IT WORKS */}
       <section className="px-6 md:px-12 py-16">
         <div className="max-w-4xl mx-auto">
-          <h2 className="text-2xl md:text-3xl font-bold text-center mb-2">
+          <h2 className="text-2xl md:text-3xl text-center mb-2">
             How LocalHelp works
           </h2>
           <p className="text-center text-gray-500 dark:text-gray-400 mb-12">
@@ -219,10 +225,10 @@ export default function Landing() {
                 variants={fadeUp}
                 className="relative flex flex-col items-start gap-3 p-6 bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl shadow-sm"
               >
-                <span className="text-4xl font-extrabold text-blue-100 dark:text-blue-900 select-none">
+                <span className="text-4xl font-bold bg-gradient-to-br from-orange-400 to-blue-400 dark:from-orange-600 dark:to-blue-600 bg-clip-text text-transparent select-none opacity-90">
                   {step.number}
                 </span>
-                <h3 className="text-lg font-bold -mt-2">{step.title}</h3>
+                <h3 className="text-lg -mt-2">{step.title}</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 leading-relaxed">
                   {step.desc}
                 </p>
@@ -235,7 +241,7 @@ export default function Landing() {
       {/* TESTIMONIALS */}
       <section className="px-6 md:px-12 py-16 bg-gray-50 dark:bg-gray-900">
         <div className="max-w-5xl mx-auto">
-          <h2 className="text-2xl md:text-3xl font-bold text-center mb-2">
+          <h2 className="text-2xl md:text-3xl text-center mb-2">
             What people are saying
           </h2>
           <p className="text-center text-gray-500 dark:text-gray-400 mb-10">
@@ -282,12 +288,12 @@ export default function Landing() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
-          className="max-w-3xl mx-auto text-center bg-blue-600 rounded-3xl px-8 py-14 shadow-xl shadow-blue-200 dark:shadow-none"
+          className="max-w-3xl mx-auto text-center bg-gradient-to-br from-orange-500 via-pink-500 to-blue-600 rounded-3xl px-8 py-14 shadow-xl shadow-blue-200 dark:shadow-none"
         >
-          <h2 className="text-3xl md:text-4xl font-extrabold text-white mb-4">
+          <h2 className="text-3xl md:text-4xl text-white mb-4">
             Ready to find your helper?
           </h2>
-          <p className="text-blue-100 mb-8 text-base">
+          <p className="text-blue-50 mb-8 text-base">
             Join LocalHelp today — free to use, free to list your skills.
           </p>
           <div className="flex flex-col sm:flex-row justify-center gap-3">
@@ -299,7 +305,7 @@ export default function Landing() {
             </button>
             <button
               onClick={() => navigate("/find")}
-              className="bg-blue-500 hover:bg-blue-400 text-white font-semibold px-8 py-3 rounded-xl transition-all active:scale-95"
+              className="bg-white/15 hover:bg-white/25 backdrop-blur-sm border border-white/30 text-white font-semibold px-8 py-3 rounded-xl transition-all active:scale-95"
             >
               Browse helpers
             </button>

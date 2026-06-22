@@ -31,7 +31,12 @@ export function PostsProvider({ children }) {
     persist([postWithId, ...posts]);
     return postWithId;
   };
-
+  const getPostAvatar = (post, currentUser) => {
+    if (currentUser && post.userId === currentUser.id) {
+      return currentUser.avatar;
+    }
+    return post.avatar || "https://i.pravatar.cc/150?img=68";
+  };
   const toggleLike = (id, liked) => {
     const updated = posts.map((p) =>
       p.id === id ? { ...p, likes: liked ? p.likes - 1 : p.likes + 1 } : p
@@ -43,19 +48,19 @@ export function PostsProvider({ children }) {
     const updated = posts.map((p) =>
       p.id === id
         ? {
-            ...p,
-            comments: [
-              ...p.comments,
-              { user: "You", text, date: new Date().toISOString().split("T")[0] },
-            ],
-          }
+          ...p,
+          comments: [
+            ...p.comments,
+            { user: "You", text, date: new Date().toISOString().split("T")[0] },
+          ],
+        }
         : p
     );
     persist(updated);
   };
 
   return (
-    <PostsContext.Provider value={{ posts, addPost, toggleLike, addComment }}>
+    <PostsContext.Provider value={{ posts, addPost, toggleLike, addComment, getPostAvatar }}>
       {children}
     </PostsContext.Provider>
   );

@@ -20,6 +20,7 @@ export function AuthProvider({ children }) {
     if (email && password.length >= 6) {
       const demoUser = {
         ...mockUser,
+        id: Date.now(),
         email,
         name: email.split("@")[0],
       };

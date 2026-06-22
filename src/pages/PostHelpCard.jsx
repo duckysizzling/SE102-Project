@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapContainer, TileLayer, Marker, useMapEvents } from "react-leaflet";
@@ -7,6 +7,7 @@ import "leaflet/dist/leaflet.css";
 import { CATEGORIES } from "../data/MockData";
 import { useHelpers } from "../context/HelperContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
+import RequireLogin from "../components/RequireLogin.jsx";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -17,6 +18,7 @@ L.Icon.Default.mergeOptions({
 
 const CAVITE_DEFAULT = { lat: 14.4298, lng: 120.9631 };
 const POSTABLE_CATEGORIES = CATEGORIES.filter((c) => c !== "All");
+const MAX_TAGS = 5;
 
 function LocationPicker({ position, onPick }) {
   useMapEvents({
@@ -38,7 +40,7 @@ export default function PostHelpCard() {
     ? helpers.find((h) => String(h.id) === String(editId))
     : null;
   const isEditMode = Boolean(existingHelper);
-  const userCards = user ? getUserHelperCards(user.name) : [];
+  const userCards = getUserHelperCards(user.id);
   const otherCards = userCards.filter((h) => !isEditMode || h.id !== existingHelper?.id);
   const usedCategories = otherCards.map((h) => h.category);
   const cardCount = otherCards.length;
@@ -56,14 +58,22 @@ export default function PostHelpCard() {
     contact: "",
     available: true,
   });
+  const [customTags, setCustomTags] = useState([]);
+  const [tagInput, setTagInput] = useState("");
   const [pin, setPin] = useState(null);
   const [mapCenter, setMapCenter] = useState(CAVITE_DEFAULT);
   const [gpsLoading, setGpsLoading] = useState(true);
   const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [toast, setToast] = useState("");
+  const nameRef = useRef(null);
+  const categoryRef = useRef(null);
+  const customCategoryRef = useRef(null);
+  const bioRef = useRef(null);
+  const rateRef = useRef(null);
+  const contactRef = useRef(null);
+  const mapRef = useRef(null);
 
-  // Pre-fill form when editing an existing helper
   useEffect(() => {
     if (existingHelper) {
       const isCustomCategory = !POSTABLE_CATEGORIES.includes(existingHelper.category);
@@ -77,15 +87,20 @@ export default function PostHelpCard() {
         contact: existingHelper.contact,
         available: existingHelper.available,
       });
+      // Pre-fill custom tags, excluding the category itself and "Other" marker
+      const existingTags = existingHelper.tags || [];
+      const filteredTags = existingTags.filter(
+        (t) => t !== existingHelper.category && t !== "Other"
+      );
+      setCustomTags(filteredTags.slice(0, MAX_TAGS));
       setPin({ lat: existingHelper.lat, lng: existingHelper.lng });
       setMapCenter({ lat: existingHelper.lat, lng: existingHelper.lng });
       setGpsLoading(false);
     }
   }, [existingHelper]);
 
-  // Try GPS only when creating a NEW card (not when editing)
   useEffect(() => {
-    if (editId) return; // skip GPS lookup entirely in edit mode
+    if (editId) return;
     if (!navigator.geolocation) {
       setGpsLoading(false);
       return;
@@ -102,10 +117,43 @@ export default function PostHelpCard() {
     );
   }, [editId]);
 
+  if (!user) {
+    return (
+      <RequireLogin
+        title="Please log in to post a help card"
+        description="You need an account to offer your services on LocalHelp."
+        icon="🛠️"
+      />
+    );
+  }
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setForm((f) => ({ ...f, [name]: value }));
     setErrors((er) => ({ ...er, [name]: "" }));
+  };
+
+  const handleAddTag = () => {
+    const trimmed = tagInput.trim();
+    if (!trimmed) return;
+    if (customTags.length >= MAX_TAGS) return;
+    if (customTags.some((t) => t.toLowerCase() === trimmed.toLowerCase())) {
+      setTagInput("");
+      return;
+    }
+    setCustomTags((prev) => [...prev, trimmed]);
+    setTagInput("");
+  };
+
+  const handleRemoveTag = (tagToRemove) => {
+    setCustomTags((prev) => prev.filter((t) => t !== tagToRemove));
+  };
+
+  const handleTagKeyDown = (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      handleAddTag();
+    }
   };
 
   const validate = () => {
@@ -131,11 +179,32 @@ export default function PostHelpCard() {
     return e;
   };
 
+  const fieldRefs = {
+    name: nameRef,
+    category: categoryRef,
+    customCategory: customCategoryRef,
+    bio: bioRef,
+    rate: rateRef,
+    contact: contactRef,
+    location: mapRef,
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     const validationErrors = validate();
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
+
+      const fieldOrder = ["name", "category", "customCategory", "bio", "rate", "contact", "location"];
+      const firstErrorField = fieldOrder.find((field) => validationErrors[field]);
+      const targetRef = fieldRefs[firstErrorField];
+
+      if (targetRef?.current) {
+        targetRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+        if (typeof targetRef.current.focus === "function") {
+          setTimeout(() => targetRef.current.focus(), 300);
+        }
+      }
       return;
     }
     setSubmitting(true);
@@ -152,8 +221,8 @@ export default function PostHelpCard() {
       bio: form.bio.trim(),
       contact: form.contact.trim(),
       tags: form.category === "Other"
-        ? [form.customCategory.trim(), "Other"]
-        : [form.category],
+        ? [form.customCategory.trim(), "Other", ...customTags]
+        : [form.category, ...customTags],
     };
 
     if (isEditMode) {
@@ -163,7 +232,7 @@ export default function PostHelpCard() {
     } else {
       addHelper({
         ...helperData,
-        avatar: user?.avatar || "https://i.pravatar.cc/150?img=68",
+        userId: user?.id || null,
         rating: 0,
         reviews: 0,
         jobsDone: 0,
@@ -224,36 +293,34 @@ export default function PostHelpCard() {
           noValidate
           className="bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 rounded-2xl p-6 shadow-sm space-y-5"
         >
-          {/* Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
               Your name
             </label>
             <input
+              ref={nameRef}
               type="text"
               name="name"
               value={form.name}
               onChange={handleChange}
               placeholder="Juan dela Cruz"
-              className={`w-full px-4 py-2.5 rounded-xl border text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 transition-all ${
-                errors.name ? "border-red-400 focus:ring-red-300" : "border-gray-200 dark:border-gray-700 focus:ring-blue-400"
-              }`}
+              className={`w-full px-4 py-2.5 rounded-xl border text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 transition-all ${errors.name ? "border-red-400 focus:ring-red-300" : "border-gray-200 dark:border-gray-700 focus:ring-blue-400"
+                }`}
             />
             {errors.name && <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1"><span>●</span> {errors.name}</p>}
           </div>
 
-          {/* Category */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
               Service category
             </label>
             <select
+              ref={categoryRef}
               name="category"
               value={form.category}
               onChange={handleChange}
-              className={`w-full px-4 py-2.5 rounded-xl border text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 transition-all ${
-                errors.category ? "border-red-400 focus:ring-red-300" : "border-gray-200 dark:border-gray-700 focus:ring-blue-400"
-              }`}
+              className={`w-full px-4 py-2.5 rounded-xl border text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-2 transition-all ${errors.category ? "border-red-400 focus:ring-red-300" : "border-gray-200 dark:border-gray-700 focus:ring-blue-400"
+                }`}
             >
               <option value="">Select a category</option>
               {POSTABLE_CATEGORIES.map((cat) => (
@@ -276,14 +343,14 @@ export default function PostHelpCard() {
                 className="mt-2.5 overflow-hidden"
               >
                 <input
+                  ref={customCategoryRef}
                   type="text"
                   name="customCategory"
                   value={form.customCategory}
                   onChange={handleChange}
                   placeholder="e.g. Midwife, Albularyo, Cake Maker..."
-                  className={`w-full px-4 py-2.5 rounded-xl border text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 transition-all ${
-                    errors.customCategory ? "border-red-400 focus:ring-red-300" : "border-gray-200 dark:border-gray-700 focus:ring-blue-400"
-                  }`}
+                  className={`w-full px-4 py-2.5 rounded-xl border text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 transition-all ${errors.customCategory ? "border-red-400 focus:ring-red-300" : "border-gray-200 dark:border-gray-700 focus:ring-blue-400"
+                    }`}
                 />
                 {errors.customCategory && <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1"><span>●</span> {errors.customCategory}</p>}
                 <p className="mt-1.5 text-xs text-gray-400">
@@ -293,40 +360,91 @@ export default function PostHelpCard() {
             )}
           </div>
 
-          {/* Bio */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
               Describe your service
             </label>
             <textarea
+              ref={bioRef}
               name="bio"
               value={form.bio}
               onChange={handleChange}
               rows={3}
               placeholder="e.g. Experienced plumber available for leak repairs, pipe installation..."
-              className={`w-full px-4 py-2.5 rounded-xl border text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 transition-all resize-none ${
-                errors.bio ? "border-red-400 focus:ring-red-300" : "border-gray-200 dark:border-gray-700 focus:ring-blue-400"
-              }`}
+              className={`w-full px-4 py-2.5 rounded-xl border text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 transition-all resize-none ${errors.bio ? "border-red-400 focus:ring-red-300" : "border-gray-200 dark:border-gray-700 focus:ring-blue-400"
+                }`}
             />
             {errors.bio && <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1"><span>●</span> {errors.bio}</p>}
           </div>
 
-          {/* Rate + Unit */}
+          {/* Custom tags */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Skills / Tags <span className="text-gray-400 font-normal">(optional, up to {MAX_TAGS})</span>
+            </label>
+            <p className="text-xs text-gray-400 mb-2">
+              Add specific skills to help people find you (e.g. "Leak Repair", "Bathroom Plumbing").
+            </p>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                value={tagInput}
+                onChange={(e) => setTagInput(e.target.value)}
+                onKeyDown={handleTagKeyDown}
+                placeholder="Type a skill and press Enter..."
+                disabled={customTags.length >= MAX_TAGS}
+                className="flex-1 px-4 py-2.5 rounded-xl border text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-400 transition-all border-gray-200 dark:border-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              />
+              <button
+                type="button"
+                onClick={handleAddTag}
+                disabled={!tagInput.trim() || customTags.length >= MAX_TAGS}
+                className="text-sm font-semibold bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2.5 rounded-xl transition-all"
+              >
+                Add
+              </button>
+            </div>
+
+            {customTags.length > 0 && (
+              <div className="flex gap-1.5 mt-2.5 flex-wrap">
+                {customTags.map((tag) => (
+                  <span
+                    key={tag}
+                    className="flex items-center gap-1.5 text-xs font-medium bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300 px-3 py-1.5 rounded-full"
+                  >
+                    {tag}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTag(tag)}
+                      className="hover:text-red-500 transition-colors leading-none"
+                    >
+                      ×
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
+
+            {customTags.length >= MAX_TAGS && (
+              <p className="text-xs text-gray-400 mt-1.5">Maximum of {MAX_TAGS} tags reached.</p>
+            )}
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
                 Rate (₱)
               </label>
               <input
+                ref={rateRef}
                 type="number"
                 name="rate"
                 value={form.rate}
                 onChange={handleChange}
                 placeholder="350"
                 min="0"
-                className={`w-full px-4 py-2.5 rounded-xl border text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 transition-all ${
-                  errors.rate ? "border-red-400 focus:ring-red-300" : "border-gray-200 dark:border-gray-700 focus:ring-blue-400"
-                }`}
+                className={`w-full px-4 py-2.5 rounded-xl border text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 transition-all ${errors.rate ? "border-red-400 focus:ring-red-300" : "border-gray-200 dark:border-gray-700 focus:ring-blue-400"
+                  }`}
               />
               {errors.rate && <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1"><span>●</span> {errors.rate}</p>}
             </div>
@@ -348,25 +466,23 @@ export default function PostHelpCard() {
             </div>
           </div>
 
-          {/* Contact */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
               Contact number
             </label>
             <input
+              ref={contactRef}
               type="text"
               name="contact"
               value={form.contact}
               onChange={handleChange}
               placeholder="09171234567"
-              className={`w-full px-4 py-2.5 rounded-xl border text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 transition-all ${
-                errors.contact ? "border-red-400 focus:ring-red-300" : "border-gray-200 dark:border-gray-700 focus:ring-blue-400"
-              }`}
+              className={`w-full px-4 py-2.5 rounded-xl border text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 transition-all ${errors.contact ? "border-red-400 focus:ring-red-300" : "border-gray-200 dark:border-gray-700 focus:ring-blue-400"
+                }`}
             />
             {errors.contact && <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1"><span>●</span> {errors.contact}</p>}
           </div>
 
-          {/* Availability toggle */}
           <div>
             <label className="flex items-center gap-3 cursor-pointer">
               <div
@@ -381,7 +497,6 @@ export default function PostHelpCard() {
             </label>
           </div>
 
-          {/* Location map picker */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
               Your location
@@ -389,7 +504,7 @@ export default function PostHelpCard() {
             <p className="text-xs text-gray-400 mb-2">
               Click anywhere on the map to {isEditMode ? "update" : "set"} your pin.
             </p>
-            <div className={`rounded-xl overflow-hidden border ${errors.location ? "border-red-400" : "border-gray-200 dark:border-gray-700"}`}>
+            <div ref={mapRef} className={`rounded-xl overflow-hidden border ${errors.location ? "border-red-400" : "border-gray-200 dark:border-gray-700"}`}>
               {!gpsLoading && (
                 <MapContainer
                   center={[mapCenter.lat, mapCenter.lng]}
@@ -412,7 +527,6 @@ export default function PostHelpCard() {
             )}
           </div>
 
-          {/* Submit */}
           <div className="flex gap-2">
             {isEditMode && (
               <button
