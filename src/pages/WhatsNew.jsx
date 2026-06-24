@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Heart,
@@ -17,6 +17,7 @@ import { POST_CATEGORIES, TRENDING_TAGS } from "../data/MockData";
 import { usePosts } from "../context/PostsContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
 import PostComposer from "../components/PostComposer.jsx";
+import { useHelpers } from "../context/HelperContext.jsx";
 
 const CATEGORY_ICONS = {
   Announcement: Megaphone,
@@ -83,11 +84,70 @@ export default function WhatsNew() {
   const { posts, toggleLike, addComment, getPostAvatar, hasLiked } = usePosts();
   const { user } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const { helpers } = useHelpers();
   const [category, setCategory] = useState("All");
   const [activeTag, setActiveTag] = useState(null);
   const [openComments, setOpenComments] = useState({});
   const [commentDrafts, setCommentDrafts] = useState({});
   const [lightboxImage, setLightboxImage] = useState(null);
+
+  const normalizeName = (value = "") =>
+    value
+      .toLowerCase()
+      .replace(/[^a-z\s]/g, "")
+      .trim()
+      .replace(/\s+/g, " ");
+
+  const findMatchedHelper = (commentUser) => {
+    const rawName = normalizeName(commentUser);
+    if (!rawName) return null;
+
+    const parts = rawName.split(" ").filter(Boolean);
+    const first = parts[0] || "";
+    const second = parts[1] || "";
+
+    return (
+      helpers.find((h) => normalizeName(h.name) === rawName) ||
+      helpers.find((h) => {
+        const helperParts = normalizeName(h.name).split(" ").filter(Boolean);
+        const helperFirst = helperParts[0] || "";
+        const helperLast = helperParts[1] || "";
+
+        if (first && second) {
+          return helperFirst === first && helperLast.startsWith(second);
+        }
+
+        return helperFirst === first;
+      }) ||
+      null
+    );
+  };
+
+  const escapeRegExp = (value = "") =>
+    value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+  const getCommentMention = (commentText) => {
+    if (!commentText) return null;
+
+    const sortedHelpers = [...helpers].sort((a, b) => b.name.length - a.name.length);
+    for (const helper of sortedHelpers) {
+      const pattern = new RegExp(`\\b${escapeRegExp(helper.name)}\\b`, "i");
+      const match = commentText.match(pattern);
+      if (match && typeof match.index === "number") {
+        const start = match.index;
+        const end = start + match[0].length;
+        return {
+          helper,
+          before: commentText.slice(0, start),
+          mention: commentText.slice(start, end),
+          after: commentText.slice(end),
+        };
+      }
+    }
+
+    return null;
+  };
 
   // Simulated initial fetch delay — shows skeletons before "data" appears
   const [loading, setLoading] = useState(true);
@@ -220,6 +280,7 @@ export default function WhatsNew() {
                   <motion.div key="results" className="space-y-4">
                     {filtered.map((post, i) => {
                       const CategoryIcon = CATEGORY_ICONS[post.category];
+                      const matchedPostHelper = findMatchedHelper(post.user);
                       return (
                       <motion.div
                         key={post.id}
@@ -237,9 +298,22 @@ export default function WhatsNew() {
                               className="w-10 h-10 rounded-full object-cover flex-shrink-0 ring-2 ring-white dark:ring-gray-900"
                             />
                             <div>
-                              <div className="font-semibold text-sm text-gray-900 dark:text-white">
-                                {post.user}
-                              </div>
+                              {matchedPostHelper ? (
+                                <button
+                                  onClick={() =>
+                                    navigate(`/helper/${matchedPostHelper.id}`, {
+                                      state: { backgroundLocation: location },
+                                    })
+                                  }
+                                  className="font-semibold text-sm text-blue-600 hover:underline dark:text-blue-400 text-left"
+                                >
+                                  {post.user}
+                                </button>
+                              ) : (
+                                <div className="font-semibold text-sm text-gray-900 dark:text-white">
+                                  {post.user}
+                                </div>
+                              )}
                               <div className="text-xs text-gray-400">
                                 {post.date}
                               </div>
@@ -340,19 +414,55 @@ export default function WhatsNew() {
                             >
                               {post.comments.length > 0 && (
                                 <div className="space-y-2 mb-3">
-                                  {post.comments.map((c, idx) => (
-                                    <div
-                                      key={idx}
-                                      className="flex gap-2 bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2"
-                                    >
-                                      <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex-shrink-0">
-                                        {c.user}
-                                      </span>
-                                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                                        {c.text}
-                                      </span>
-                                    </div>
-                                  ))}
+                                  {post.comments.map((c, idx) => {
+                                    const matchedHelper = findMatchedHelper(c.user);
+                                    const mentioned = getCommentMention(c.text);
+
+                                    return (
+                                      <div
+                                        key={idx}
+                                        className="flex gap-2 bg-gray-50 dark:bg-gray-800 rounded-xl px-3 py-2"
+                                      >
+                                        {matchedHelper ? (
+                                          <button
+                                            onClick={() =>
+                                              navigate(`/helper/${matchedHelper.id}`, {
+                                                state: { backgroundLocation: location },
+                                              })
+                                            }
+                                            className="text-xs font-semibold text-blue-600 hover:underline flex-shrink-0 text-left"
+                                          >
+                                            {c.user}
+                                          </button>
+                                        ) : (
+                                          <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex-shrink-0">
+                                            {c.user}
+                                          </span>
+                                        )}
+
+                                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                                          {mentioned ? (
+                                            <>
+                                              {mentioned.before}
+                                              <button
+                                                onClick={() =>
+                                                  navigate(`/helper/${mentioned.helper.id}`, {
+                                                    state: { backgroundLocation: location },
+                                                  })
+                                                }
+                                                className="text-blue-600 hover:underline dark:text-blue-400 font-medium"
+                                              >
+                                                {mentioned.mention}
+                                              </button>
+                                              {mentioned.after}
+                                            </>
+                                          ) : (
+                                            c.text
+                                          )}
+                                        </span>
+                                      </div>
+                                    );
+                                  })}
                                 </div>
                               )}
 

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from "react-leaflet";
 import MarkerClusterGroup from "react-leaflet-cluster";
@@ -372,6 +372,7 @@ export default function FindHelper() {
   const [gpsError, setGpsError] = useState("");
   const [radius, setRadius] = useState(15);
   const [showGuestModal, setShowGuestModal] = useState(false);
+  const cardRefs = useRef({});
 
   // Simulated initial fetch delay — shows skeleton cards before "data" appears
   const [loading, setLoading] = useState(true);
@@ -379,6 +380,14 @@ export default function FindHelper() {
     const timer = setTimeout(() => setLoading(false), 800);
     return () => clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (!selectedHelper) return;
+    const el = cardRefs.current[selectedHelper.id];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [selectedHelper]);
 
   // If guest tries a gated action, show modal instead
   const gatedAction = (fn) => {
@@ -740,6 +749,7 @@ export default function FindHelper() {
                       return (
                         <motion.div
                           key={helper.id}
+                          ref={(el) => { cardRefs.current[helper.id] = el; }}
                           initial={{ opacity: 0, y: 16 }}
                           animate={{ opacity: 1, y: 0 }}
                           exit={{ opacity: 0, y: -8 }}
