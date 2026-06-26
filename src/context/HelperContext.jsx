@@ -46,22 +46,42 @@ export function HelperProvider({ children }) {
   };
 
   const requestVerification = (userId) => {
-  const updated = helpers.map((h) =>
-    h.userId === userId ? { ...h, verificationStatus: "reviewing" } : h
-  );
-  setHelpers(updated);
-  localStorage.setItem("localhelp_helpers", JSON.stringify(updated));
+    const updated = helpers.map((h) =>
+      h.userId === userId ? { ...h, verificationStatus: "reviewing" } : h
+    );
+    setHelpers(updated);
+    localStorage.setItem("localhelp_helpers", JSON.stringify(updated));
 
-  setTimeout(() => {
-    setHelpers((prev) => {
-      const final = prev.map((h) =>
-        h.userId === userId ? { ...h, verified: true, verificationStatus: "approved" } : h
-      );
-      localStorage.setItem("localhelp_helpers", JSON.stringify(final));
-      return final;
+    setTimeout(() => {
+      setHelpers((prev) => {
+        const final = prev.map((h) =>
+          h.userId === userId ? { ...h, verified: true, verificationStatus: "approved" } : h
+        );
+        localStorage.setItem("localhelp_helpers", JSON.stringify(final));
+        return final;
+      });
+    }, 2500);
+  };
+
+  const markJobDone = (helperId, review) => {
+    const updated = helpers.map((h) => {
+      if (String(h.id) !== String(helperId)) return h;
+
+      const newReviews = [review, ...(h.reviewsList || [])];
+      const newJobsDone = (h.jobsDone || 0) + 1;
+      const totalRating = newReviews.reduce((sum, r) => sum + r.rating, 0);
+      const avgRating = parseFloat((totalRating / newReviews.length).toFixed(1));
+
+      return {
+        ...h,
+        jobsDone: newJobsDone,
+        reviewsList: newReviews,
+        rating: avgRating,
+      };
     });
-  }, 2500);
-};
+    setHelpers(updated);
+    localStorage.setItem("localhelp_helpers", JSON.stringify(updated));
+  };
 
   return (
     <HelperContext.Provider
@@ -73,6 +93,7 @@ export function HelperProvider({ children }) {
         getUserHelperCards,
         getHelperAvatar,
         requestVerification,
+        markJobDone,
       }}
     >
       {children}

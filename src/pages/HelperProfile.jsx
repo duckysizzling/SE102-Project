@@ -16,6 +16,7 @@ import {
   Megaphone,
   HelpCircle,
   Tag,
+  CheckCircle,
 } from "lucide-react";
 import { useHelpers } from "../context/HelperContext.jsx";
 import { useAuth } from "../context/AuthContext.jsx";
@@ -154,7 +155,7 @@ function PostsSkeleton() {
 export default function HelperProfile() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { helpers, getHelperAvatar } = useHelpers();
+  const { helpers, getHelperAvatar, markJobDone } = useHelpers();
   const { user } = useAuth();
   const { posts, toggleLike, addComment, getPostAvatar, hasLiked } = usePosts();
   const baseHelper = helpers.find((h) => String(h.id) === String(id));
@@ -167,10 +168,17 @@ export default function HelperProfile() {
   const [toast, setToast] = useState("");
   const [reportOpen, setReportOpen] = useState(false);
   const [reportReason, setReportReason] = useState("");
-  const [chatOpen, setChatOpen] = useState(false);         // ← chat drawer state
+  const [chatOpen, setChatOpen] = useState(false);
   const [openComments, setOpenComments] = useState({});
   const [commentDrafts, setCommentDrafts] = useState({});
   const [lightboxImage, setLightboxImage] = useState(null);
+
+  // Mark as Done states
+  const [markDoneOpen, setMarkDoneOpen] = useState(false);
+  const [markDoneRating, setMarkDoneRating] = useState(0);
+  const [markDoneHover, setMarkDoneHover] = useState(0);
+  const [markDoneComment, setMarkDoneComment] = useState("");
+  const [markDoneError, setMarkDoneError] = useState("");
 
   if (!baseHelper) {
     return (
@@ -246,6 +254,27 @@ export default function HelperProfile() {
     showToast("Review submitted!");
   };
 
+  const handleMarkDone = (e) => {
+    e.preventDefault();
+    if (markDoneRating === 0) { setMarkDoneError("Please select a star rating."); return; }
+    if (!markDoneComment.trim()) { setMarkDoneError("Please write a short comment."); return; }
+
+    const review = {
+      user: user?.name || "Anonymous",
+      rating: markDoneRating,
+      comment: markDoneComment.trim(),
+      date: new Date().toISOString().split("T")[0],
+    };
+
+    markJobDone(baseHelper.id, review);
+    setReviewsList((prev) => [review, ...prev]);
+    setMarkDoneOpen(false);
+    setMarkDoneRating(0);
+    setMarkDoneComment("");
+    setMarkDoneError("");
+    showToast("Job marked as done! Review submitted ✓");
+  };
+
   const handleReportSubmit = (e) => {
     e.preventDefault();
     if (!reportReason.trim()) return;
@@ -291,7 +320,7 @@ export default function HelperProfile() {
         </button>
       </div>
 
-      {/* ── Main content — wider max-w-4xl ── */}
+      {/* ── Main content ── */}
       <div className="max-w-4xl mx-auto px-4 space-y-4 pb-10">
 
         {/* ── Profile hero card ── */}
@@ -346,7 +375,16 @@ export default function HelperProfile() {
                   </div>
 
                   {/* CTA buttons */}
-                  <div className="flex items-center gap-2 pb-1">
+                  <div className="flex items-center gap-2 pb-1 flex-wrap justify-end">
+                    {user && !isOwnCard && (
+                      <button
+                        onClick={() => setMarkDoneOpen(true)}
+                        className="flex items-center gap-1.5 text-sm font-semibold bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-full transition-all active:scale-95"
+                      >
+                        <CheckCircle size={15} strokeWidth={2} />
+                        Mark as Done
+                      </button>
+                    )}
                     <button
                       onClick={handleChat}
                       className="flex items-center gap-1.5 text-sm font-semibold bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 px-4 py-2 rounded-full transition-all active:scale-95"
@@ -757,6 +795,84 @@ export default function HelperProfile() {
             className="fixed bottom-6 left-1/2 -translate-x-1/2 bg-gray-900 dark:bg-gray-100 text-white dark:text-gray-900 text-sm font-medium px-4 py-2.5 rounded-xl shadow-lg z-50 whitespace-nowrap"
           >
             {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── Mark as Done modal ── */}
+      <AnimatePresence>
+        {markDoneOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/40 flex items-center justify-center px-4 z-50"
+            onClick={() => setMarkDoneOpen(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white dark:bg-gray-900 rounded-2xl p-6 w-full max-w-sm shadow-xl"
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <CheckCircle size={18} className="text-green-500" strokeWidth={2.5} />
+                <h3 className="text-base font-bold text-gray-900 dark:text-white">
+                  Mark Job as Done
+                </h3>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-4">
+                Rate your experience with <span className="font-semibold">{baseHelper.name}</span>. This will count toward their job total and tier progress.
+              </p>
+              <form onSubmit={handleMarkDone}>
+                <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Your Rating</p>
+                <div className="flex items-center gap-1 mb-3">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <button
+                      key={star}
+                      type="button"
+                      onClick={() => setMarkDoneRating(star)}
+                      onMouseEnter={() => setMarkDoneHover(star)}
+                      onMouseLeave={() => setMarkDoneHover(0)}
+                      className="text-2xl leading-none transition-transform active:scale-90"
+                    >
+                      <span className={star <= (markDoneHover || markDoneRating) ? "text-amber-400" : "text-gray-300 dark:text-gray-600"}>
+                        ★
+                      </span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1.5">Your Review</p>
+                <textarea
+                  value={markDoneComment}
+                  onChange={(e) => setMarkDoneComment(e.target.value)}
+                  placeholder={`How was your experience with ${baseHelper.name}?`}
+                  rows={3}
+                  className="w-full text-sm px-3 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-900 dark:text-gray-100 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-green-400/50 focus:border-green-400 transition-all resize-none"
+                />
+                {markDoneError && (
+                  <p className="mt-1.5 text-xs text-red-500 flex items-center gap-1">
+                    <span>●</span> {markDoneError}
+                  </p>
+                )}
+                <div className="flex justify-end gap-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={() => setMarkDoneOpen(false)}
+                    className="text-sm font-medium text-gray-500 dark:text-gray-400 px-4 py-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="text-sm font-semibold bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-xl transition-all active:scale-95"
+                  >
+                    Confirm & Submit
+                  </button>
+                </div>
+              </form>
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
